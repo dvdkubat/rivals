@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="utf-8" />
+
+  <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script src="./client/jquery.js"></script>
+
+  <link href="/client/game.css" rel="stylesheet" type="text/css" />
+
+  <script src="./client/js/animation.js"></script>
+
+  <!-- test only -->
+  <script src="./client/js/shr/component.js"></script>
+  <script src="./client/js/shr/colision.js"></script>
+  <script src="./client/js/shr/2d.js"></script>
+
+  <script src="./client/js/cache.js"></script>
+  <script src="./client/js/variables.js"></script>
+  <script src="./client/js/display.js"></script>
+
+  <!-- toto je správně ! -->
+  <script src="./client/js/shr/path.js"></script>
+  <script src="./client/js/shr/world.js"></script>
+  <script src="./client/js/shr/lobby.js"></script>
+  <script src="./client/js/clientLobby.js"></script>
+  <script src="./client/js/keywatch.js"></script>
+  <script src="./client/js/client.js"></script>
+  <script src="./client/js/menu.js"></script>
+
+
+
+</head>
+
+
+<body class="game-bg">
+
+  <div style="position: fixed; top: 0px; left:0px; z-index: 10; border: 2px solid black; display: none;" id="log">
+    <!-- <canvas id="show-canvas" style="height: 90%; border: 1px solid red;"></canvas> -->
+  </div>
+
+
+  <div id="total-player-count">0</div>
+
+  <!--  Obrazovka po přihlášení -->
+  <div id="main-menu" class="guiDiv">
+    <div id="menu-btns">
+      <h1 style="color: white;">Warpath: The Last Stand</h1>
+      <button type="button" onclick="ButtonEvent('Play')">Play</button><br>
+      <button type="button" onclick="ButtonEvent('Settings')">Nastavení</button>
+    </div>
+  </div>
+
+
+  <div id="settings-overlay" class="hidden guiDiv game-bg-overlay">
+    <div class="game-bg-darger settings-dialog">
+      <div>
+        Hráč: <input id="player-name" value="Jméno" autocomplete="off" />
+      </div>
+
+      <div>
+        <button type="button" onclick="ButtonEvent('save-settings')">Save</button>
+        <button type="button" onclick="ButtonEvent('save-settings-close')">Save & Close</button>
+        <button type="button" onclick="ButtonEvent('menu')">Zpět</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Play - ShowGameList -->
+  <div id="lobby" class="guiDiv hidden game-bg-overlay">
+    <div style="padding: 10px;">
+      <div>
+        <table id="servers" class="game-bg-darger">
+          <thead>
+            <tr>
+              <th>&#128274;</th>
+              <th>Název</th>
+              <th>Hra</th>
+              <th>Mód</th>
+              <th>Hráčů</th>
+            </tr>
+          </thead>
+          <tbody id="server-list"> </tbody>
+        </table>
+      </div>
+
+      <div class="lobby-btns">
+        <!--
+          &#128472; - šipky > asi sehnat obrázek?
+        <input id="inp-password" /> - zadávání hesla nějak lépe - časem
+        <input id="hash-connect" /> - pokud vyplním, tak se chci napojit * na zadání 8. znaku povolit join ... časem
+      -->
+        <button type="button" style="float: left;" onclick="ButtonEvent('Refresh')" class="btn-refresh">R</button>
+        <button type="button" style="float: left;" onclick="ButtonEvent('Host')">Nová hra</button>
+
+        <button type="button" style="float: right;" onclick="ButtonEvent('menu')">Zpět</button>
+        <!-- připojit by ještě mělo ukázat nastavení loby, výber hradu a pozice? Pak až na nějaký ready by se to mělo zapnout-->
+        <button type="button" style="float: right;" onclick="ButtonEvent('Join')" id="btn-join"
+          disabled>Připojit</button>
+      </div>
+
+      <!-- Create - CreateGame -->
+      <div id="create-game" class="hidden">
+        <div id="create-dialog">
+          <button type="button" class="cancel-button" onclick="ButtonEvent('Cancel')">X</button>
+          <br>
+          <table id="new-game">
+            <tr>
+              <td>Název</td>
+              <td><input id="new-inp-name" value="" /></td>
+            </tr>
+            <tr>
+              <td>Heslo</td>
+              <td><input id="new-inp-pass" value="" /></td>
+            </tr>
+            <tr>
+              <td colspan="2">mapa, ... , .. ??</td>
+            </tr>
+            <tr>
+              <td>Hráčů</td>
+              <td><input id="new-inp-max" value="4" disabled /></td> <!-- podle mapy -->
+            </tr>
+          </table>
+          <button type="button" onclick="ButtonEvent('Create')">Vytvořit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="lobby-overview" class="hidden guiDiv">
+    <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">Ready</button>
+
+    castle selector <br>
+    ??? <br>
+
+  </div>
+
+
+
+  <!-- 
+  <div id="menu-pause" class="hidden guiDiv">
+    <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">Odpojit</button>
+    <button type="button" onclick="ButtonEvent('PauseClose')">Zavřít</button><br>
+    <div id="table-container">
+      <table id="in-game-stats">
+        <thead></thead>
+        <tbody id="stats-body">
+        </tbody>
+      </table>
+    </div>
+  </div>
+  -->
+
+
+
+  <div id="game-div" class="hidden" style="width: 100%; height: 100%;">
+    <div id="game-area" style="width: 1600px; height: 1200px; max-width: 100%; max-height: 100%;">
+
+
+
+      <div class="container">
+
+
+        <div class="row card-list-column">
+          <img src="human/city.png" style="width: 1024px; height: 683px;" />
+          <div class="card-list" id="buildings"></div>
+        </div>
+
+
+        <div class="row ui-units card-list-row">
+          <div id="barracks" class="card"> <!-- todo : podle budovy -->
+            <strong>Kasárna</strong><br>
+            <img src="barracks.png" /><br>
+            Level: 1
+          </div>
+          <div class="card-list" id="units" style="display: inline-block;"></div>
+        </div>
+
+
+        <div class="row-last card-list card-list-row" id="resources"></div>
+
+
+        <!--  turn panel / gameState panel... ?
+        ideálně to dát doprava dolu a zobrzaovat vždy? --- asi nějaký panel... 
+            //gameDayDisplay.innerText = `Den: ${0}`; // gameManager !
+        <div id="gameDay"></div> 
+        <button id="newDayButton">Nový den</button>
+        
+        -->
+
+        <div id="click-info-detail" class="detail" style="display: none;">
+          <div id="click-info-detail-data"></div>
+        </div>
+
+      </div>
+
+      <script src="const.js"></script>
+      <script src="test.js"></script>
+
+
+<!-- 💨 🏃 -->
+
+      <div class="main">
+        <div class="map-container" id="mapContainer">
+          <canvas id="hexCanvas"></canvas>
+        </div>
+        <div class="sidebar">
+          <div class="section" style="height: 220px; text-align: center;">
+            <span style="font-size: 145px;">🌍</span>
+          </div>
+          <div class="section" style="text-align: center;">
+            <button onclick="alert('disconnect')">⚙️</button>
+            <button onclick="alert('nastavení')">⚙️</button>
+            <button onclick="alert('pauza')">⏸️</button>
+            <button onclick="alert('statistiky')">📈</button>
+          </div>
+          <div class="section" style="text-align: center; padding: 0;">
+            <button style="width: 100%; border: 0; height: 35px; font-size: 20px;"
+              onclick="alert('todo - zobrazit město!')">
+              🏰 <span id="player-castle-name"></span>
+            </button>
+          </div>
+          <div class="section">
+            <strong>🎖️ Generálové</strong>
+            <div id="army-list">
+              <div style="background-color: silver;" onclick="alert('add id selector and show my army')">🥇Natan
+                <span id="log" style="display: nones;"></span> 20
+              </div>
+              <div onclick="alert('add id selector and show my army')">🥈Smaug 15</div>
+              <div onclick="alert('add id selector and show my army')">🥉Voldemort 25</div>
+
+
+            </div>
+            <hr>
+            <div id="selected-army-strength" style="text-align: center">
+              150⚔️ | 70🛡️ | 20🦵 | 150💪
+            </div>
+            <div>
+              <!-- todo : šipkama přepínací list?  -->
+              <!-- 🩻 x-ray >> debuf ?? -->
+              <table border="0" id="selected-army-units">
+                <tr>
+                  <td>Sedlák</td>
+                  <td>120</td>
+                </tr>
+                <tr>
+                  <td>Kopí</td>
+                  <td>120</td>
+                </tr>
+                <tr>
+                  <td>Lučišník</td>
+                  <td>70</td>
+                </tr>
+                <tr>
+                  <td>Mnich</td>
+                  <td>50</td>
+                </tr>
+                <tr>
+                  <td>Kušník</td>
+                  <td>23</td>
+                </tr>
+                <tr>
+                  <td>Rytíř</td>
+                  <td>10</td>
+                </tr>
+                <tr>
+                  <td>Jezdec</td>
+                  <td>5</td>
+                </tr>
+              </table>
+
+              <hr>
+
+              35 / 150 🛍️ <!--🎒 -->
+              <ul id="selected-army-inventory">
+                <li>jídlo [10] zahodit</li> <!--todo, po kliknutí je možné něco zahodit? -->
+                <li>dřevo [20]</li>
+                <li>kámen [10]</li>
+                <li>železo [5]</li>
+                <li>zlato [5]</li>
+              </ul>
+
+
+            </div>
+          </div>
+          <footer>
+            12.1.1400 | Den 3 &mdash; ☀️ Slunečno
+          </footer>
+        </div>
+      </div>
+
+
+      <script src="grid.js"></script>
+      <script src="test.js"></script>
+
+
+
+
+    </div>
+
+</body>
+
+</html>

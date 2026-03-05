@@ -1,0 +1,19 @@
+{
+  "name": "warpath",
+  "version": "1.2.3",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.13.4",
+    "socket.io": "^1.4.5"
+  },
+  "enignes": {
+    "node": "4.1.x"
+  },
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "Harlej",
+  "license": "ISC"
+}

@@ -1,0 +1,123 @@
+<style>
+  #cs_select-position .cs_select-row {
+    background-color: darkkhaki;
+    height: 75px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 20px;
+    margin-right: 20px;
+
+  }
+
+  .cs_select-row div {
+    height: 73px;
+    display: inline-block;
+    border: 1px solid black;
+
+  }
+
+  #map-overview {
+    font-size: 100px;
+  }
+</style>
+
+<script>
+
+
+</script>
+<!-- client.js zpracovává události kliknutí na tlačítka + posílá na server a vykreslování do dlaždic -->
+
+<div id="sc_select-content" style="background-color: rgba(126, 133, 41, 0.295); width: 100% ; height: 100%;">
+  <div id="pozice" style="background-color: azure; width: 48%; float: left; height: 100%;">
+
+    <div id="cs_select-position-prefab">
+
+      <div class="cs_select-row">
+        <!-- < %= text.settings % > -->
+        <table border="1px solid black">
+          <thead>
+            <tr id="template-position">
+              <td>#</td>
+              <td><img src="./client/img/shield.png"></td>
+              <td><img src="./client/img/human_city_icon.png"></td>
+              <td>
+                <select id="race-select" onChange="alert('todo : change race to ' + this.value)" >
+                  <option value="human">Human</option>
+                  <option value="undead">Undead</option>
+                </select>
+              </td>
+              <td><button onclick="UserEvent('leave-position')">Leave</button></td>
+              <td>
+                <button onclick="UserEvent('change-ready', true)">✅ Připraven</button>
+                <button onclick="UserEvent('change-ready', false)">❌ Výběr</button>
+              </td>
+            </tr>
+          </thead>
+          <tbody id="cs_fill-select-position">
+            <!-- 
+            <tr>
+              <td>1</td>
+              <td colspan="3">
+                <button onclick="UserEvent('select-position')">Vybrat</button>
+              </td>
+            </tr>
+             -->
+            <tr>
+              <td>2</td>
+              <td colspan="4">
+                <button onclick="UserEvent('select-position', 2)">Vybrat</button>
+              </td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td colspan="4">
+                <button onclick="UserEvent('select-position')">Vybrat</button>
+              </td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td colspan="4">
+                <button onclick="UserEvent('select-position')">Vybrat</button>
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+
+
+      </div>
+      <div>
+
+        Connected players: 1
+
+        <button onclick="UserEvent('back-to-mm')">Back</button>
+        <button onclick="UserEvent('check-start')">Start</button>
+
+      </div>
+
+
+    </div>
+
+  </div>
+
+  <div id="vyber" style="background-color:blueviolet ; width: 48%; float: right;">
+
+    <div id="map-selection" style="background-color: rgb(129, 129, 255);">
+      <div id="map-overview">🌍</div>
+      <div id="map-list">
+        <select id="map-select" onChange="alert('todo : change map to ' + this.value)">
+          <option value="zelda">Zelda</option>
+          <option value="zelda2">Zelda 2</option>
+        </select>
+
+        <!-- 
+        <button id="cs_select_btn-select" onclick="UserEvent('select-map')">Vybrat</button>
+         -->
+      </div>
+    </div>
+
+
+
+  </div>
+
+</div>

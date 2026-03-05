@@ -1,0 +1,101 @@
+{
+    "maps": [
+        {
+            "zelda": 4
+        }
+    ],
+    "races": [
+        {
+            "name": "Lidé",
+            "icon": "🏰"
+        },
+        {
+            "name": "Nemrtví",
+            "icon": "💀"
+        },
+        {
+            "name": "Roboti",
+            "icon": "🤖"
+        },
+        {
+            "name": "Orkové",
+            "icon": "🪓"
+        }
+    ],
+    "actions": [
+        "#999",
+        "red",
+        "white",
+        "#637cff",
+        "blue"
+    ],
+    "POIs": [
+        {
+            "type": "loot",
+            "img": "cart",
+            "resources": {
+                "wood": 50,
+                "gold": 10,
+                "soul": 3
+            }
+        },
+        {
+            "type": "loot",
+            "img": "chest",
+            "resources": {
+                "wood": 50,
+                "gold": 10,
+                "soul": 3
+            }
+        },
+        {
+            "type": "loot",
+            "img": "skeleton",
+            "resources": {
+                "wood": 50,
+                "gold": 10,
+                "soul": 3
+            }
+        },
+        {
+            "type": "loot",
+            "img": "battlefield",
+            "resources": {
+                "wood": 50,
+                "gold": 10,
+                "soul": 3
+            }
+        },
+        {
+            "type": "loot",
+            "img": "trader",
+            "resources": {
+                "wood": 50,
+                "gold": 10,
+                "soul": 3
+            }
+        }
+    ],
+    "Terrain": [
+        {
+            "type": "none",
+            "color": "#b22222",
+            "cost": 0
+        },
+        {
+            "type": "water",
+            "color": "#4682b4",
+            "cost": 0.7
+        },
+        {
+            "type": "grass",
+            "color": "#7cfc00",
+            "cost": 1
+        },
+        {
+            "type": "forest",
+            "color": "#228b22",
+            "cost": 1.2
+        }
+    ]
+}

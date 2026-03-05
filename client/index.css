@@ -1,0 +1,790 @@
+.hidden {
+    display: none !important;
+}
+
+
+html {
+    height: 100%;
+    overflow: hidden;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    -webkit-touch-callout: none;
+    /* iOS Safari */
+    -webkit-user-select: none;
+    /* Safari */
+    -khtml-user-select: none;
+    /* Konqueror HTML */
+    -moz-user-select: none;
+    /* Old versions of Firefox */
+    -ms-user-select: none;
+    /* Internet Explorer/Edge */
+    user-select: none;
+    /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+}
+
+
+canvas {
+    /*border:1px solid #d3d3d3;*/
+    /* background-color: #f1f1f1; */
+    /* height: 100%; */
+    background-color: transparent;
+    position: absolute;
+    /*
+    max-width: 100%;
+    max-height: 100%;
+    */
+    border: 1px solid black;
+    background-color: silver;
+}
+
+
+#total-player-count {
+    position: absolute;
+    z-index: 10;
+    right: 1px;
+    bottom: 1px;
+    font-size: 10px;
+}
+
+.game-pause-btn {
+    float: right;
+    position: absolute;
+    right: 0px;
+}
+
+.game-pause-btn button {
+    width: 50px;
+    height: 50px;
+    font-weight: bold;
+    font-size: 20px;
+    border-radius: 10px;
+    border: 0;
+    background-color: rgb(240 240 240 / 50%);
+}
+
+#won-message {
+    position: absolute;
+    top: 130px;
+    width: 100%;
+    text-align: center;
+    font-size: 47px;
+    font-weight: bold;
+    color: red;
+}
+
+.guiDiv {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+
+#ready {
+    position: absolute;
+    bottom: 0px;
+    width: 100%;
+    /*border: 1px solid black;*/
+    font-size: 25px;
+}
+
+#ready input {
+    width: 20px;
+    height: 20px;
+}
+
+#ready button {
+    float: right;
+    font-size: 25px;
+}
+
+
+
+.game-bg {
+    z-index: 1;
+    background-image: url(menu.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position-x: left;
+    background-position-y: center;
+}
+
+.game-bg-darger {
+    background-color: #c0c0c09c;
+}
+
+.game-bg-overlay {
+    z-index: 2;
+    position: absolute;
+    /*background-color: rgba(109, 109, 109, 0.445);*/
+}
+
+
+#main-menu button {
+    width: 182px;
+    height: 50px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+    vertical-align: bottom;
+    padding-left: 11px;
+    margin-top: 20px;
+    margin-left: 20px;
+}
+
+
+
+#servers-list #servers {
+    border: 2px solid rgb(54, 54, 54);
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#servers-list #servers thead {
+    border-bottom: 2px solid black;
+}
+
+#servers-list #servers tbody {
+    font-weight: bold;
+}
+
+#servers-list #servers tr {
+    height: 30px;
+}
+
+#servers-list #servers td {
+    border: 1px solid rgb(54, 54, 54);
+}
+
+#servers-list #servers th {
+    border: 1px solid rgb(54, 54, 54);
+}
+
+.rowselected {
+    background-color: rgba(255, 128, 24, 0.418);
+}
+
+#player-name {
+    height: 25px;
+    width: 150px;
+    border-radius: 3px;
+    border: 1px solid black;
+    font-size: 22px;
+}
+
+#game-area {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    position: absolute;
+
+    background-color: #ffffffc9;
+}
+
+#servers-list button,
+#settings-overlay button {
+    width: 140px;
+    height: 35px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 5px;
+    font-family: "Lucida Console", "Courier New", monospace;
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+#servers-list #servers tr th:first-child,
+#servers-list #servers tr td:first-child {
+    width: 30px;
+    text-align: center;
+}
+
+
+.locked td:first-child::after {
+    content: "✓";
+}
+
+.unlocked td:first-child::after {
+    content: "✘"
+}
+
+
+#create-game {
+    width: 100%;
+    text-align: center;
+    margin: auto;
+    top: 100px;
+    position: absolute;
+}
+
+#create-game table {
+    padding: 10px;
+    width: 100%;
+}
+
+#create-dialog {
+    color: black;
+    margin: auto;
+    background-color: white;
+    border: 2px solid black;
+    width: 270px;
+    height: 180px;
+}
+
+
+
+#create-game .cancel-button {
+    float: right;
+    margin: 0px;
+    width: 35px;
+    height: 35px;
+    border-right: 0px;
+    border-top: 0px;
+    border-bottom-left-radius: 3px;
+    border: 1px solid silver;
+}
+
+
+#settings {
+    z-index: 2;
+    position: absolute;
+    background-color: rgba(109, 109, 109, 0.445);
+}
+
+
+.settings-dialog {
+    margin: auto;
+    width: 650px;
+}
+
+#car-image {
+    width: 100px;
+    height: 100px;
+    border: 1px solid black;
+    background-color: gold;
+}
+
+.progres-bar {
+    border-radius: 15px;
+    height: 25px;
+}
+
+.progres-bar-bg {
+    background-color: gray;
+}
+
+.progres-bar-text {
+    padding-top: 4px;
+    padding-left: 20px;
+    float: left;
+}
+
+.progres-bar-value {
+    background: green;
+    text-align: center;
+}
+
+
+#menu-pause {
+    z-index: 2;
+    position: absolute;
+    background-color: rgba(109, 109, 109, 0.445);
+    top: 0;
+    left: 0;
+    text-align: center;
+}
+
+
+.btn-refresh {
+    width: 30px !important;
+    padding: 0px;
+    background-color: transparent;
+    border: 0px;
+    font-size: 26px !important;
+}
+
+.lobby-btns {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+#table-controls tbody[pc="1"] tr td:nth-child(n+3) {
+    display: none;
+}
+
+#table-controls tbody[pc="2"] tr td:nth-child(n+4) {
+    display: none;
+}
+
+
+#scoreboardoverlay {
+    position: absolute;
+    top: 15%;
+    left: 25%;
+    width: 50%;
+}
+
+#scoreboardoverlay table {
+    background-color: rgba(30, 30, 30, 0.69);
+    width: 100%;
+}
+
+#scoreboardoverlay tr {
+    line-height: 35px;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+#scoreboard tbody tr:nth-child(1) {
+    background: rgba(212, 230, 80, 0.7) !important;
+}
+
+#scoreboard tbody tr td:nth-child(1) {
+    white-space: nowrap;
+    padding-left: 10px;
+}
+
+#scoreboard tbody tr td:nth-child(2) {
+    width: 15%;
+    text-align: center;
+}
+
+#scoreboard tbody tr td:nth-child(3) {
+    width: 15%;
+    text-align: center;
+}
+
+/* team kill neni .. jine body ? */
+#scoreboard tbody tr td:nth-child(4) {
+    width: 15%;
+    text-align: center;
+}
+
+#scoreboard tbody tr:nth-child(even) {
+    background: rgba(204, 204, 204, 0.5)
+}
+
+#scoreboard tbody tr:nth-child(odd) {
+    background: rgba(234, 234, 234, 0.5)
+}
+
+#scoreboard-ctf {
+    border-collapse: collapse;
+}
+
+#scoreboard-ctf tbody tr td {
+    border: 2px solid black;
+    background-color: rgba(25, 75, 32, 0.534);
+}
+
+#scoreboard-ctf tbody tr td:nth-child(1) {
+    text-align: left;
+    color: blue;
+    padding-left: 10px;
+    width: 35%;
+}
+
+#scoreboard-ctf tbody tr td:nth-child(2) {
+    text-align: center;
+}
+
+#scoreboard-ctf tbody tr td:nth-child(3) {
+    text-align: center;
+}
+
+#scoreboard-ctf tbody tr td:nth-child(4) {
+    text-align: right;
+    padding-right: 10px;
+    width: 35%;
+}
+
+
+
+
+
+#joinoverlay {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background: rgba(100, 100, 100, 0.5);
+    width: 100%;
+    height: 100%;
+    padding-top: 101px;
+}
+
+#joincontrols {
+    font-size: 30px;
+    margin: auto;
+    width: 20%;
+    min-width: 300px;
+    ;
+    text-align: center;
+    border: 3px solid green;
+    background: rgb(0 128 0 / 72%);
+    border-radius: 10px;
+    padding: 50px;
+}
+
+#joincontrols input {
+    font-size: 30px;
+    width: 300px;
+
+}
+
+#joincontrols button {
+    font-size: 30px;
+    margin-top: 20px;
+    width: 150px;
+    height: 46px;
+    font-weight: bold;
+    border-radius: 5px;
+    border-color: black;
+}
+
+#in-game-stats {
+    border-radius: 3px;
+    font-size: 20px;
+    border-collapse: collapse;
+    width: 90%;
+    color: black;
+    background-color: silver;
+    margin-left: 5%;
+}
+
+#in-game-stats td {
+    border: 1px solid black;
+}
+
+.player-list {
+    /*border-top:2px solid black; nepotřebuju když mám mezeru*/
+    font-weight: bold;
+    height: 30px;
+}
+
+.bigger td {
+    padding: 5px 10px 2px 10px;
+}
+
+.spacer {
+    height: 10px;
+}
+
+.left {
+    text-align: left;
+}
+
+.center {
+    text-align: center;
+}
+
+
+
+#stats-body td {
+    padding: 6px 0px 0px 0px;
+}
+
+#stats-body tr:nth-child(1) {
+    background-color: gold;
+}
+
+#stats-body tr:nth-child(2) {
+    background-color: silver;
+}
+
+#stats-body tr:nth-child(3) {
+    background-color: #b08d57;
+}
+
+#stats-body tr {
+    background-color: rgb(223, 223, 223);
+}
+
+#stats-body tr td:first-child {
+    text-align: left;
+    padding-left: 10px;
+}
+
+#table-container {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 10px;
+    top: 85px;
+    padding: 0px 5%;
+    overflow-y: auto;
+}
+
+
+#new-inp-mode {
+    width: 100%;
+    height: 21px;
+}
+
+
+
+
+
+
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+}
+
+.castle-panel,
+.buildings-list {
+    border: 1px solid #000;
+    padding: 10px;
+}
+
+.buildings-list {
+    width: 300px;
+}
+
+button {
+    margin-top: 5px;
+}
+
+
+
+
+
+body {
+    font-family: sans-serif;
+    background: #7a7a7a;
+    /* #1e1e1e */
+    color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+
+
+.card {
+    background: #333;
+    border-radius: 8px;
+    padding: 10px;
+    width: 125px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.2s;
+    margin-left: 10px;
+}
+
+.ui-units .card {
+    text-align: center;
+}
+
+.card:hover {
+    border-color: #ffd700;
+}
+
+.detail {
+    background: #222;
+    border-radius: 8px;
+    /* padding: 15px; */
+    text-align: center;
+    position: absolute;
+    background: #97979797;
+    z-index: 10;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+#click-info-detail-data {
+    width: 500px;
+    margin: auto;
+    text-align: left;
+    border: 2px solid silver;
+    background-color: gray;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 40px;
+}
+
+.unit-status {
+    font-size: 0.9em;
+    color: #aaa;
+}
+
+#buildings {
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 10px;
+    right: 10px;
+    position: absolute;
+}
+
+.row {
+    padding-bottom: 10px;
+}
+
+.row-last {
+    bottom: 0px;
+    position: absolute;
+    width: 100%;
+    /* background-color: #5f2e2e; */
+}
+
+.ui-units {
+    bottom: 50px;
+    position: absolute;
+}
+
+.unit-icon {
+    height: 120px;
+}
+
+.gray-backgroud {
+    background: gray
+}
+
+.card-list-row .card {
+    display: inline-block;
+}
+
+.card-list-column .card {
+    display: block;
+    margin-bottom: 10px;
+    width: 200px;
+}
+
+
+body {
+    font-family: sans-serif;
+    padding: 0px;
+    background: #f0f0f0;
+}
+
+
+.controls {
+    display: inline-block;
+}
+
+.slider-container {
+    position: relative;
+    width: 300px;
+    display: inline-block;
+    /* margin: 0px auto; */
+}
+
+.labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0px;
+    padding: 0 0px;
+}
+
+.labels span {
+    width: 25px;
+    text-align: center;
+    font-size: 10px;
+}
+
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #ddd;
+    border-radius: 4px;
+    outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+}
+
+input[type=range]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.value-display {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+    display: none;
+}
+
+
+body {
+    margin: 0;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.map-container {
+    position: absolute;
+    overflow: hidden;
+    border: 2px solid #000;
+    border-radius: 5px;
+    bottom: 0px;
+    right: 320px;
+    left: 0px;
+    top: 0px;
+}
+
+#hexCanvas {
+    position: absolute;
+}
+
+.sidebar {
+    width: 300px;
+    background: #f4f4f4;
+    flex-direction: column;
+    padding: 10px;
+    right: 0px;
+    position: absolute;
+    bottom: 0px;
+    top: 0px;
+    overflow-y: auto;
+}
+
+.section {
+    border: 1px solid #aaa;
+    padding: 8px;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+footer {
+    height: 40px;
+    background: #222;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 0px;
+    width: 292px;
+}

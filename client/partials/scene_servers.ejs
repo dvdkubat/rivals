@@ -1,0 +1,82 @@
+<!-- Play - ShowGameList -->
+<div style="padding: 10px;">
+  <div>
+    <table id="servers" class="game-bg-darger">
+      <thead>
+        <tr>
+          <th>&#128274;</th>
+          <th>
+            <%= text.name %>
+          </th>
+          <th>
+            <%= text.game %>
+          </th>
+          <th>
+            <%= text.mode %>
+          </th>
+          <th>
+            <%= text.players %>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="server-list"> </tbody>
+    </table>
+  </div>
+
+  <div class="lobby-btns">
+    <!--
+          &#128472; - šipky > asi sehnat obrázek?
+        <input id="inp-password" /> - zadávání hesla nějak lépe - časem
+        <input id="hash-connect" /> - pokud vyplním, tak se chci napojit * na zadání 8. znaku povolit join ... časem
+      -->
+    <button type="button" style="float: left;" onclick="UserEvent('btnRefresh')" class="btn-refresh">
+      ♻️
+    </button>
+
+    <button type="button" style="float: left;" onclick="UserEvent('btnHost')">
+      <%= text.new_game %>
+    </button>
+
+    <button type="button" style="float: left;" onclick="UserEvent('menu')">
+      <%= text.back %>
+    </button>
+    <!-- připojit by ještě mělo ukázat nastavení loby, výber hradu a pozice? Pak až na nějaký ready by se to mělo zapnout-->
+    <button type="button" style="float: left;" onclick="UserEvent('btnJoin')" id="btn-join" disabled>
+      <%= text.connect %>
+    </button>
+  </div>
+
+  <!-- Create - CreateGame -->
+  <div id="create-game" class="hidden">
+    <div id="create-dialog">
+      <button type="button" class="cancel-button" onclick="UserEvent('btnCancelCreate')">X</button>
+      <br>
+      <table id="new-game">
+        <tr>
+          <td>
+            <%= text.name %>
+          </td>
+          <td><input id="new-inp-name" value="" /></td>
+        </tr>
+        <tr>
+          <td>
+            <%= text.password %>
+          </td>
+          <td><input id="new-inp-pass" value="" /></td>
+        </tr>
+        <tr>
+          <td colspan="2">map</td>
+        </tr>
+        <tr>
+          <td>
+            <%= text.players %>
+          </td>
+          <td><input id="new-inp-max" value="4" disabled /></td> <!-- podle mapy -->
+        </tr>
+      </table>
+      <button type="button" onclick="UserEvent('btnCreateGame')">
+        <%= text.create %>
+      </button>
+    </div>
+  </div>
+</div>

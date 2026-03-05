@@ -1,0 +1,130 @@
+{
+    "WEATHER_DEFINITIONS": {
+        "clear": {
+            "name": "Slunečno ☀️",
+            "description": "Jasný den. Zvyšuje morálku, ale odhaluje jednotky.",
+            "effects": {
+                "morale": 10,
+                "undeadPenalty": {
+                    "defense": -10,
+                    "morale": -15
+                },
+                "stealthPenalty": true
+            },
+            "visual": "bright",
+            "duration": [
+                1,
+                2
+            ]
+        },
+        "cloudy": {
+            "name": "Zataženo ☁️",
+            "description": "Neutrální počasí bez výrazných vlivů.",
+            "effects": {},
+            "visual": "gray",
+            "duration": [
+                1,
+                3
+            ]
+        },
+        "rain": {
+            "name": "Déšť 🌧️",
+            "description": "Ztěžuje pohyb a snižuje přesnost střelby.",
+            "effects": {
+                "rangedPenalty": -15,
+                "movementPenalty": -1
+            },
+            "visual": "wet",
+            "duration": [
+                1,
+                2
+            ]
+        },
+        "storm": {
+            "name": "Bouřka ⛈️",
+            "description": "Nebezpečné počasí. Šance na náhodné poškození jednotek.",
+            "effects": {
+                "randomDamage": {
+                    "chance": 0.2,
+                    "amount": 3
+                },
+                "energyUnitsPenalty": -20
+            },
+            "visual": "flashes",
+            "duration": [
+                1
+            ]
+        },
+        "wind": {
+            "name": "Silný vítr 🌬️",
+            "description": "Zhoršuje pohyb vzdušných jednotek a duchů.",
+            "effects": {
+                "flyingPenalty": -20,
+                "windWeaknessTrigger": true
+            },
+            "visual": "dusty",
+            "duration": [
+                1,
+                3
+            ]
+        },
+        "snow": {
+            "name": "Sníh ❄️",
+            "description": "Snižuje rychlost pohybu a zakrývá viditelnost.",
+            "effects": {
+                "movementPenalty": -2,
+                "visionPenalty": -2
+            },
+            "visual": "snowy",
+            "duration": [
+                2,
+                4
+            ]
+        },
+        "heat": {
+            "name": "Pařák",
+            "description": "Snižuje rychlost pohybu a zakrývá viditelnost.",
+            "effects": {
+                "movementPenalty": -2,
+                "visionPenalty": -2
+            },
+            "visual": "snowy",
+            "duration": [
+                2,
+                4
+            ]
+        },
+        "fog": {
+            "name": "Mlha 🌫️",
+            "description": "Skrývá jednotky a omezuje dosah útoků.",
+            "effects": {
+                "visionPenalty": -3,
+                "stealthBonus": 20
+            },
+            "visual": "mist",
+            "duration": [
+                1,
+                2
+            ]
+        },
+        "night": {
+            "name": "Noc 🌙",
+            "description": "Zvýhodňuje nemrtvé a snížená viditelnost.",
+            "effects": {
+                "undeadBonus": {
+                    "attack": 10,
+                    "defense": 10
+                },
+                "visionPenalty": -2,
+                "humanPenalty": {
+                    "morale": -10
+                }
+            },
+            "visual": "dark",
+            "duration": [
+                1
+            ]
+        }
+    }
+}
+

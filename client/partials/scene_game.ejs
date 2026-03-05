@@ -1,0 +1,137 @@
+<div id="game-area" style="width: 1600px; height: 1200px; max-width: 100%; max-height: 100%;">
+
+      <div id="game-sceen-town" group="game" name="castle" class="container hidden">
+
+        <!-- Obrázek města + seznam budov -->
+        <div class="row card-list-column">
+          <img src="./client/img/human_city_bg.png" style="width: 1024px; height: 683px;" />
+          <div class="card-list" id="buildings"></div>
+        </div>
+
+        <!-- Rekrutace jednotek = kasárny + jednotky -->
+        <div class="row ui-units card-list-row">
+          <div id="barracks" class="card"> <!-- todo : podle budovy -->
+            <strong>Kasárna</strong><br>
+            <img src="./client/img/barracks.png" /><br>
+            Level: 1
+          </div>
+          <div class="card-list" id="units" style="display: inline-block;"></div>
+        </div>
+
+        <!-- Seznam dostupných surovin -->
+        <div class="row-last card-list card-list-row" id="resources"></div>
+
+        <!-- Vyskakovací okno s popisem - pro rekrutaci a stavbu budov -->
+        <div id="click-info-detail" class="detail" style="display: none;">
+          <div id="click-info-detail-data"></div>
+        </div>
+
+
+        <!--  turn panel / gameState panel... ?
+            ideálně to dát doprava dolu a zobrzaovat vždy? --- asi nějaký panel... 
+            //gameDayDisplay.innerText = `Den: ${0}`; // gameManager !
+            <div id="gameDay"></div> 
+            <button id="newDayButton">Nový den</button>
+            -->
+      </div>
+
+
+
+
+      <!-- 💨 🏃 -->
+
+      <div class="main " group="game" name="map" >
+
+
+        <div class="map-container" id="mapContainer">
+          <canvas id="world-game-canvas"></canvas>
+        </div>
+
+
+        <div class="sidebar">
+          <div class="section" style="height: 220px; text-align: center;">
+            <span style="font-size: 145px;">🌍</span>
+          </div>
+          <div class="section" style="text-align: center;">
+            <button onclick="alert('disconnect')">⚙️</button>
+            <button onclick="alert('nastavení')">⚙️</button>
+            <button onclick="alert('pauza')">⏸️</button>
+            <button onclick="alert('statistiky')">📈</button>
+          </div>
+          <div class="section" style="text-align: center; padding: 0;">
+            <button style="width: 100%; border: 0; height: 35px; font-size: 20px;"
+              onclick="alert('todo - zobrazit město!')">
+              🏰 <span id="player-castle-name"></span>
+            </button>
+          </div>
+          <div class="section">
+            <strong>🎖️ Generálové</strong>
+            <div id="army-list">
+              <div style="background-color: silver;" onclick="alert('add id selector and show my army')">🥇Natan
+                <span id="log" style="display: nones;"></span> 20
+              </div>
+              <div onclick="alert('add id selector and show my army')">🥈Smaug 15</div>
+              <div onclick="alert('add id selector and show my army')">🥉Voldemort 25</div>
+
+
+            </div>
+            <hr>
+            <div id="selected-army-strength" style="text-align: center">
+              150⚔️ | 70🛡️ | 20🦵 | 150💪
+            </div>
+            <div>
+              <!-- todo : šipkama přepínací list?  -->
+              <!-- 🩻 x-ray >> debuf ?? -->
+              <table border="0" id="selected-army-units">
+                <tr>
+                  <td>Sedlák</td>
+                  <td>120</td>
+                </tr>
+                <tr>
+                  <td>Kopí</td>
+                  <td>120</td>
+                </tr>
+                <tr>
+                  <td>Lučišník</td>
+                  <td>70</td>
+                </tr>
+                <tr>
+                  <td>Mnich</td>
+                  <td>50</td>
+                </tr>
+                <tr>
+                  <td>Kušník</td>
+                  <td>23</td>
+                </tr>
+                <tr>
+                  <td>Rytíř</td>
+                  <td>10</td>
+                </tr>
+                <tr>
+                  <td>Jezdec</td>
+                  <td>5</td>
+                </tr>
+              </table>
+
+              <hr>
+
+              35 / 150 🛍️ <!--🎒 -->
+              <ul id="selected-army-inventory">
+                <li>jídlo [10] zahodit</li> <!--todo, po kliknutí je možné něco zahodit? -->
+                <li>dřevo [20]</li>
+                <li>kámen [10]</li>
+                <li>železo [5]</li>
+                <li>zlato [5]</li>
+              </ul>
+
+
+            </div>
+          </div>
+          <footer>
+            12.1.1400 | Den 3 &mdash; ☀️ Slunečno
+          </footer>
+        </div>
+      </div>
+
+
+

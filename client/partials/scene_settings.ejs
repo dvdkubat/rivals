@@ -1,0 +1,21 @@
+  <div class="game-bg-darger settings-dialog">
+    <div>
+      <%= text.player %>: <input id="player-name" value="<%= text.player_name %>" autocomplete="off" />
+    </div>
+
+    jazyk CZ / EN<br>
+    zvuk ----#---<br>
+
+
+    <div>
+      <button type="button" onclick="UserEvent('save-settings')">
+        <%= text.save %>
+      </button>
+      <button type="button" onclick="UserEvent('save-settings-close')" style="width: auto;">
+        <%= text.save_and_back %>
+      </button>
+      <button type="button" onclick="UserEvent('menu')">
+        <%= text.back %>
+      </button>
+    </div>
+  </div>

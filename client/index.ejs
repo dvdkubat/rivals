@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="utf-8" />
+
+  <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script src="./client/jquery.js"></script>
+
+  <link href="/client/index.css" rel="stylesheet" type="text/css" />
+
+
+  <!-- test only 
+  <script src="./client/js/shr/component.js"></script>
+  <script src="./client/js/shr/colision.js"></script>
+  <script src="./client/js/shr/2d.js"></script>
+-->
+  <script src="./client/js/cache.js"></script>
+  <script src="./client/js/data.js"></script>
+  <script src="./client/js/const.js"></script>
+  <!-- <script src="./client/js/variables.js"></script> -->
+  <!-- <script src="./client/js/display.js"></script> -->
+
+  <!-- toto je správně ! -->
+  <!-- <script src="./client/js/shr/path.js"></script> -->
+  <!-- <script src="./client/js/shr/world.js"></script> -->
+  <script src="./client/js/index.js"></script>
+  <script src="./client/js/display.js"></script>
+  <script src="./client/js/shr/lobby.js"></script>
+  <script src="./client/js/clientLobby.js"></script>
+  <script src="./client/js/keywatch.js"></script>
+
+  
+  <script src="./client/js/client.js"></script>
+  <script src="./client/js/scene_select.js"></script>
+
+  <!-- <script src="./client/js/const.js"></script> -->
+  <script src="./client/js/grid.js"></script>
+
+  <script src="./client/js/world.js"></script>
+  <!-- <script src="./client/js/mapa.js"></script> -->
+
+  <script src="./client/js/castle.js"></script>
+  <!-- <script src="./client/js/test.js"></script> -->
+
+  <script src="./client/js/shr/c.js"></script>
+</head>
+
+
+<body class="game-bg" style="color: black;">
+  <!--jelikož to nahradí libovolný text, tak to zvládne i doplnění / úpravu třídy -->
+
+  <!-- <%- html.lobby || 'smolik' %> -->
+  <div style="position: fixed; top: 0px; left:0px; z-index: 10; border: 2px solid black; display: none;" id="log">
+    <!-- <canvas id="show-canvas" style="height: 90%; border: 1px solid red;"></canvas> -->
+  </div>
+  <div id="total-player-count">0</div>
+
+  <!-- Nevím jestli tam chci blejt html z /partials... asi bych se obešel bez toho zas tak složitý to není, hodilo by se to spíš na nějaký git srandy... -->
+  <!-- na všechny přepínací obrzaovky bych měl dát třídu game-sceen, bych to mohl jednodušeji přepínat a nechávat pouze jednu aktivní. Případně nějaký atribut -->
+
+
+  <!--  Hlavní obrazovka -->
+  <div id="main-menu" group="scene" name="menu" class="guiDiv">
+    <%- html.scene_main %>
+  </div>
+
+  <div id="settings-overlay" group="scene" name="settings" class="hidden guiDiv game-bg-overlay">
+    <%- html.scene_settings %>
+  </div>
+
+  <!-- Výběr lobby -->
+  <div id="servers-list" group="scene" name="servers" class="guiDiv hidden game-bg-overlay">
+    <%- html.scene_servers %>
+  </div>
+
+  <div id="sceen-prepare-game" group="scene" name="lobby" class="hidden"
+    style="width: 1600px; height: 1200px; max-width: 100%; max-height: 100%;">
+    <%- html.scene_select %>
+  </div>
+
+  <div id="sceen-game-area" group="scene" name="ingame" class="hidden" style="width: 100%; height: 100%;">
+    <%- html.scene_game %>
+  </div>
+
+
+
+  <!-- tady už bych jenom řešil hru: -->
+  <!-- 
+      <div id="lobby-overview" class="hidden guiDiv">
+        <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">
+          <%= text.ready %>
+        </button>
+
+        castle selector <br>
+        ??? <br>
+
+      </div> -->
+
+  <!-- 
+  <div id="menu-pause" class="hidden guiDiv">
+    <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">Odpojit</button>
+    <button type="button" onclick="ButtonEvent('PauseClose')">Zavřít</button><br>
+    <div id="table-container">
+      <table id="in-game-stats">
+        <thead></thead>
+        <tbody id="stats-body">
+        </tbody>
+      </table>
+    </div>
+  </div>
+  -->
+
+
+
+
+
+
+
+</body>
+
+</html>
