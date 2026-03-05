@@ -1,0 +1,75 @@
+<%#
+  PATCH pro client/index.ejs
+  Přidej/nahraď tyto části v existujícím souboru.
+  Sekce označené === PŘIDEJ === nebo === NAHRAĎ ===
+%>
+
+<%# === NAHRAĎ: celý <head> blok script tagů === %>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="utf-8" />
+  <title><%= text._wtls || 'Warpath' %></title>
+
+  <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script src="./client/jquery.js"></script>
+  <link href="/client/index.css" rel="stylesheet" type="text/css" />
+
+  <%# i18n — musí být PRVNÍ, před ostatními skripty %>
+  <script src="./client/js/i18n.js"></script>
+
+  <%# Sdílená data a konstanty %>
+  <script src="./client/js/cache.js"></script>
+  <script src="./client/js/data.js"></script>
+  <script src="./client/js/const.js"></script>
+
+  <%# Herní engine — pořadí záleží! %>
+  <script src="./client/js/shr/lobby.js"></script>
+  <script src="./client/js/shr/combat.js"></script>
+  <script src="./client/js/army.js"></script>
+  <script src="./client/js/gameManager.js"></script>
+  <script src="./client/js/mapLoader.js"></script>
+  <script src="./client/js/mapController.js"></script>
+
+  <%# UI a komunikace %>
+  <script src="./client/js/index.js"></script>
+  <script src="./client/js/display.js"></script>
+  <script src="./client/js/clientLobby.js"></script>
+  <script src="./client/js/keywatch.js"></script>
+  <script src="./client/js/client.js"></script>
+  <script src="./client/js/scene_select.js"></script>
+
+  <%# Mapa — grid.js jen dokud neprojde migrace na mapLoader %>
+  <script src="./client/js/grid.js"></script>
+  <script src="./client/js/world.js"></script>
+  <script src="./client/js/castle.js"></script>
+  <script src="./client/js/shr/c.js"></script>
+</head>
+
+
+<%# === NAHRAĎ: <body> tag — přidej data-lobby-id a data-lang === %>
+
+<body class="game-bg"
+      style="color: black;"
+      data-lobby-id="<%= lobbyId || '' %>"
+      data-lang="<%= lang || 'cs' %>">
+
+
+<%# === PŘIDEJ: lang switcher — kdekoliv v UI, doporučeně do hlavního menu nebo settings === %>
+<%# Nejjednodušší — plovoucí přepínač vpravo nahoře: %>
+
+<div style="position: fixed; top: 8px; right: 8px; z-index: 999;">
+  <select id="lang-switcher"
+          onchange="I18n.setLang(this.value)"
+          style="font-size: 16px; border-radius: 4px; padding: 2px 4px; cursor: pointer;">
+    <option value="cs" <%= (lang === 'cs' ? 'selected' : '') %>>🇨🇿</option>
+    <option value="en" <%= (lang === 'en' ? 'selected' : '') %>>🇬🇧</option>
+  </select>
+</div>
+
+
+<%# === UKÁZKA: tlačítka s data-i18n (přidej atribut, text zůstane jako SSR fallback) === %>
+<%# PŘED:  <button onclick="UserEvent('btnPlay')">Hrát</button>                          %>
+<%# PO:    <button onclick="UserEvent('btnPlay')" data-i18n="play">Hrát</button>         %>
+<%#                                                                                        %>
+<%# Texty se vyrendrují server-side (funguje bez JS),                                      %>
+<%# data-i18n je hint pro klientský I18n.setLang() při přepnutí bez reloadu.              %>
