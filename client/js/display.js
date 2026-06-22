@@ -70,20 +70,19 @@ class display {
         this.canvas = document.getElementById(canvasId); // document.getElementById("show-canvas");
         this.canvasCtx = this.canvas.getContext("2d");
 
-        // asi v pohodě, nemělo by se to zavolat ? snad... ? případně to nějak ošetřit - asi bych mohl zavolat na konci checkimages ?
-        this.canvas.width = this.imgCache[this.bgImg].width;
-        this.canvas.height = this.imgCache[this.bgImg].height;
+        this.canvas.width = screenWidth;
+        this.canvas.height = screenHeight;
 
         this.startHex = null;   //  13 row; 23 col
         this.endHex = null;
 
-        //
-        this.startHex = grid[11][22];
+        this.prepareGrid();
+        this.startHex = grid[11] && grid[11][22] ? grid[11][22] : null;
 
     }
 
 
-    // kamera je 2D pozice hráče 
+    // kamera je 2D pozice hráče
     draw(player, worldInfo) {
         // const grid = worldInfo.grid; // todo !!
         // kontrola, zda mám načtený všechny obrázky
@@ -145,6 +144,30 @@ class display {
     }
 
 
+    prepareGrid() {
+        if (grid.length || typeof gridData === "undefined") return;
+        grid = gridData.map((row, r) => row.map((point, q) =>
+            new Point.Point(point.x, point.y, point.action || null, point.activity || 0, point.terrain || 0, q, r)
+        ));
+    }
+
+    resizeToMap(meta) {
+        const bg = this.imgCache[meta.bgImage || this.bgImg];
+        this.bgImg = meta.bgImage || this.bgImg;
+        if (bg && bg.complete && bg.width && bg.height) {
+            this.canvas.width = bg.width;
+            this.canvas.height = bg.height;
+            return;
+        }
+
+        const hs = meta.hexSize || hexSize || 16;
+        const dir = meta.direction || direction || 'flat';
+        const hexWidth = dir === 'flat' ? Math.sqrt(3) * hs : 2 * hs;
+        const hexHeight = dir === 'flat' ? 2 * hs : Math.sqrt(3) * hs;
+        this.canvas.width = (meta.cols || 0) * hexWidth + hexWidth / 2;
+        this.canvas.height = (meta.rows || 0) * hexHeight * 0.75 + hexHeight * 0.25;
+    }
+
     img(name) {
         return this.imgCache[name];
     }
@@ -152,11 +175,11 @@ class display {
     drawStartEnd() {
         if (startHex) {
             var hero = this.img("hero");
-            ctx.drawImage(hero, startHex.x - hero.width / 2, startHex.y - hero.height / 2 - 5, hero.width, hero.height);
+            this.canvasCtx.drawImage(hero, startHex.x - hero.width / 2, startHex.y - hero.height / 2 - 5, hero.width, hero.height);
         }
         if (endHex) {
-            ctx.font = "bold 18px arial";
-            ctx.fillText('❎', endHex.x - 10, endHex.y + 5)
+            this.canvasCtx.font = "bold 18px arial";
+            this.canvasCtx.fillText('❎', endHex.x - 10, endHex.y + 5)
             // ctx.fillText('❌', endHex.x+10, endHex.y+10)
             // ctx.fillStyle = "blue";
             // ctx.fillRect(endHex.x - 5, endHex.y - 5, 10, 10);
@@ -272,6 +295,10 @@ class display {
         // init mapy po načtení všech obrázků
         // this.background.width = this.imgCache[this.bgImg].width;
         // this.background.height = this.imgCache[this.bgImg].height;
+        if (this.imgCache[this.bgImg]) {
+            this.canvas.width = this.imgCache[this.bgImg].width || this.resolution.x;
+            this.canvas.height = this.imgCache[this.bgImg].height || this.resolution.y;
+        }
         this.isReady = true;
 
         return true;

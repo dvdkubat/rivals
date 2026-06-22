@@ -1,211 +1,281 @@
-
+/**
+ * scripts/serverLobby.js
+ * Per-game lobby — správa hráčů, socketů, herního stavu.
+ *
+ * Opravy oproti originálu:
+ *  - socketList je nyní Map { socketId → socket } místo pole
+ *    → O(1) lookup při disconnect místo O(n) smyčky
+ *  - disconnect() správně odstraňuje podle socketId
+ *  - connect() vrací konzistentní strukturu
+ *  - startGame() připraveno (bylo prázdné)
+ *  - info() vrací správné pořadí sloupců pro DisplayListTable
+ */
 
 if (typeof require !== 'undefined') {
-  var base = require("../client/js/shr/lobby");
-  // var component = require("../client/js/shr/component");
+  var base = require('../client/js/shr/lobby');
 }
-// if(typeof require !== 'undefined'){
-//  var moduleName2 = require('./shared2');
-// }
-
 
 (function (exports) {
 
-
-  const spawn = { x: 220, y: 410 }
-
   const _default = {
-    id: "",
-    pass: "",
-    name: "Lasagne",
-    mode: "Standard",
-    max: 64,
-    limit: 0,
-    stats: null,
-    canvasek: "game-canvas"
+    id:     '',
+    pass:   '',
+    name:   'Hra',
+    mode:   'Standard',
+    max:    4,
+    map:    'zelda',
+    limit:  0,
   };
-
 
   exports.lobby = class lobby extends base.lobbyBase {
 
-    // todo :: map by mohlo něco dělat.. ?
     constructor(prm) {
       super(prm);
       this.isServer = true;
 
-      this.pass = prm.pass;
-      this.mode = prm.mode;
-      this.max = prm.max;
-      this.map = prm.map;
+      this.pass   = prm.pass   ?? '';
+      this.mode   = prm.mode   ?? 'Standard';
+      this.max    = prm.max    ?? 4;
+      this.map    = prm.map    ?? 'zelda';
+      this.limit  = prm.limit  ?? 0;
 
-      this.playerList = {}; // seznam hráčů - stačí na serveru?
-      this.socketList = []; // socket list
+      // Map místo pole — klíč = socket.id, hodnota = socket objekt
+      this.socketMap  = new Map();
+      this.playerData = new Map(); // socketId → { name, race, ready }
 
-      this.inGame = 0;
-      this.players = 0;
+      this.players   = 0;
       this.readyCount = 0;
+      this.active    = false;   // true = hra běží
 
-      //sem ?
-      this.weather = null; // aktuální počasí, nějaký to genrováníčko, a zobrzauju to pak "jinak"
-      this.heat = null;
-
+      this.weather = null;
+      this.stateVersion = 0;
+      this.gameState = { players: {}, version: this.stateVersion };
     }
+
+    // ─── HESLO ───────────────────────────────────────────────
 
     checkPassword(pass) {
-      return (this.pass == pass || this.pass == "")
+      return this.pass === '' || this.pass === pass;
     }
+
+    // ─── PŘIPOJENÍ ───────────────────────────────────────────
+
     connect(socket, prm) {
-      prm = Object.assign({}, prm);
+      if (this.players >= this.max)
+        return { error: 'full' };
 
-      if (this.players == this.max)
-        return { error: "full" }
-
+      this.socketMap.set(socket.id, socket);
+      this.playerData.set(socket.id, {
+        name:  prm.playerName || 'Hráč',
+        race:  'human',
+        ready: false
+      });
       this.players++;
-      this.socketList.push(socket);
-      // jak budu evidovat hráče, nebude to přeci jen chtít tuhle "component" použít?
-      //      this.components.set(prm.Id, new component.component({ id: prm.Id, name: prm.playerName, dimension: { x: 48, y: 96 }, position: spawn }));
+      this.ensurePlayerState(socket.id, prm.playerName || 'Hráč');
 
-      console.log('poslat info o mapě');
+      console.log(`[Lobby ${this.id}] Připojen: ${prm.playerName} (${socket.id}) — ${this.players}/${this.max}`);
+
       return {
-        name: this.name,
-        items: this.packet(true),
-        lobby: "info", // mapa, její rozměry a tak ... nebo jen název a pak to stáhnout jinde... jinde teprve budu nastavovat !!
-        active: this.active
+        name:   this.name,
+        lobbyId: this.id,
+        map:    this.map,
+        mode:   this.mode,
+        active: this.active,
+        playerId: socket.id,
+        state:  this.gameState,
+        items:  this.packet(true),
       };
     }
 
-    disconnect(playerId) {
-      this.send("OnDisconnect", playerId); // this.components[socket.id]);
+    disconnect(socketId) {
+      if (!this.socketMap.has(socketId)) return;
 
-      this.players--;
-      console.log("odpojit z lobby");
+      const player = this.playerData.get(socketId);
+      this.socketMap.delete(socketId);
+      this.playerData.delete(socketId);
+      delete this.gameState.players[socketId];
+      this.players = Math.max(0, this.players - 1);
 
-      for (var i = 0; i < this.socketList.length; i++) {
-        if (this.socketList[i] == playerId) {
-          this.socketList.splice(i, 1);
-          break;
-        }
+      // Notifikuj ostatní hráče v lobby
+      this.send('OnDisconnect', { socketId, name: player?.name });
+
+      console.log(`[Lobby ${this.id}] Odpojen: ${player?.name || socketId} — zbývá ${this.players}/${this.max}`);
+    }
+
+    // ─── READY / START ───────────────────────────────────────
+
+    playerReady(socketId, data) {
+      const player = this.playerData.get(socketId);
+      if (!player) return;
+
+      player.ready = data?.ready ?? true;
+      this.readyCount = [...this.playerData.values()].filter(p => p.ready).length;
+
+      console.log(`[Lobby ${this.id}] Ready: ${this.readyCount}/${this.players}`);
+      this.send('PlayerReady', { socketId, ready: player.ready, count: this.readyCount });
+
+      // Auto-start pokud jsou všichni připraveni (min. 2 hráči)
+      if (this.readyCount >= this.players && this.players >= 2) {
+        this.startGame();
       }
     }
 
-    // readyChanged(data) {
-    //   // přepnu, stav, udělám nějaký send - buď 5, 4, 3, 2, 1 nebo změnu ikonky
-    //   // this.send("", aaa)
-    //   console.log("todo - redy changed !")
-    // }
+    startGame() {
+      if (this.active) return;
+      this.active = true;
 
-
-
-    // budu pořád posílat jako seznam cimponentů ? nebo to přepracuju... ?
-    packet(full) {
-      var items = [];
-      for (const value of this.components.values()) {
-        items.push(value.packet(full));
-      }
-
-      return { components: items }
+      console.log(`[Lobby ${this.id}] Hra začíná!`);
+      this.broadcastGameState();
+      this.send('GameStarts', {
+        state: this.gameState,
+        players: [...this.playerData.entries()].map(([id, p]) => ({
+          socketId: id,
+          name: p.name,
+          race: p.race
+        }))
+      });
     }
 
-    ///časem spojit funkce - pokud jsem ve hře, tak dostávám connected + pakety
-    updateClients(connectedPlayers) {
-      this.send("TotalPlayers", connectedPlayers);
-    }
+    // ─── KOMUNIKACE ──────────────────────────────────────────
 
-
+    /** Pošle událost všem hráčům v lobby */
     send(emit, data) {
-      for (i = 0; i < this.socketList.length; i++) {
-        this.socketList[i].emit(emit, data);
+      for (const socket of this.socketMap.values()) {
+        socket.emit(emit, data);
       }
     }
 
+    /** Obecné zprávy z klienta (pohyb, konec tahu, ...) */
+    LobbyMessage(socketId, data) {
+      if (!data?.fce) return;
 
+      switch (data.fce) {
+        case 'UpdateClientPosition':
+        case 'ArmyMoved':
+          this.updateArmy(socketId, data.data);
+          break;
+
+        case 'BuildCastle':
+        case 'RecruitArmy':
+          this.updateEconomy(socketId, data.data);
+          break;
+
+        case 'ReadyStateChange':
+          this.playerReady(socketId, data.data);
+          break;
+
+        case 'EndTurn':
+          // TODO - metoda která zpracuje konec tahu a přepne na dalšího hráče
+          break;
+
+        case 'SetRace':
+          if (this.playerData.has(socketId)) {
+            this.playerData.get(socketId).race = data.data?.race;
+            this.ensurePlayerState(socketId, this.playerData.get(socketId).name);
+            this.gameState.players[socketId].race = data.data?.race || 'human';
+            this.broadcastGameState();
+          }
+          break;
+
+        default:
+          console.warn(`[Lobby ${this.id}] Neznámá LobbyMessage: ${data.fce}`);
+      }
+    }
+
+    // ─── INFO / PACKET ───────────────────────────────────────
+
+    /** Vrátí řádek pro tabulku serverů v klientu */
     info() {
       return [
         this.id,
         this.name,
-        this.limitString,
+        this.map,
         this.mode,
-        this.players + '/' + this.max.toString(),
-        this.pass != ""
+        `${this.players}/${this.max}`,
+        this.pass !== ''   // true = zamčeno
       ];
     }
 
-
-    clientUpdate(player) {
-      try {
-        var item = this.components.get(player.id);
-        item.set4d("position", player.position);
-      }
-      catch (e) {
-      }
+    updateClients(connectedPlayers) {
+      this.send('TotalPlayers', connectedPlayers);
     }
 
-    playerReady(player, state) {
-      console.log("playerReady: ", player, state);
-      this.active = true;
-      this.send("GameStarts", {});
+    packet(full) {
+      return {
+        id:      this.id,
+        name:    this.name,
+        players: this.players,
+        max:     this.max,
+        active:  this.active,
+        state:   full ? this.gameState : undefined,
+      };
+    }
+
+    ensurePlayerState(socketId, name) {
+      if (this.gameState.players[socketId]) return;
+      this.gameState.players[socketId] = {
+        id: socketId,
+        name,
+        race: 'human',
+        castle: {
+          race: 'human',
+          resources: { wood: 100, stone: 100, gold: 100, population: 7, food: 0, iron: 0 },
+          buildings: { saw_mill: 2, bakery: 0 }
+        },
+        armies: [{
+          id: `army_${socketId}`,
+          ownerId: socketId,
+          name: 'Natan',
+          race: 'human',
+          q: 22,
+          r: 11,
+          units: { spearman: 5, archer: 2 },
+          movementPoints: 20,
+          speed: 20
+        }]
+      };
+      this.bumpState();
+    }
+
+    updateArmy(socketId, data = {}) {
+      this.ensurePlayerState(socketId, this.playerData.get(socketId)?.name || 'Hráč');
+      const player = this.gameState.players[socketId];
+      const army = data.army;
+      if (army) {
+        const existingIndex = player.armies.findIndex(item => item.id === army.id);
+        if (existingIndex === -1) player.armies.push(army);
+        else player.armies[existingIndex] = army;
+      }
+      if (data.castle) player.castle = data.castle;
+      this.bumpState();
+      this.broadcastGameState();
+    }
+
+    updateEconomy(socketId, data = {}) {
+      this.ensurePlayerState(socketId, this.playerData.get(socketId)?.name || 'Hráč');
+      const player = this.gameState.players[socketId];
+      if (data.castle) player.castle = data.castle;
+      if (data.army) {
+        const existingIndex = player.armies.findIndex(item => item.id === data.army.id);
+        if (existingIndex === -1) player.armies.push(data.army);
+        else player.armies[existingIndex] = data.army;
+      }
+      this.bumpState();
+      this.broadcastGameState();
+    }
+
+    bumpState() {
+      this.stateVersion++;
+      this.gameState.version = this.stateVersion;
+    }
+
+    broadcastGameState() {
+      this.send('OnLobbyMessage', { fce: 'GameState', data: this.gameState });
     }
 
     getReadyText() {
-      return this.readyCount + "/" + this.players;
+      return `${this.readyCount}/${this.players}`;
     }
+  };
 
-
-
-
-
-
-    ////////////////////////////////////////////////
-
-
-    // startGame() {
-    //   this.gameStarted = true;
-
-    //   if (this.play erList[this.currentPlayer].isNPC) // pokud NPC začíná, tak může hned dát kartu
-    //     this.playNPC(); // this.play erList[this.currentPlayer]);
-
-    //   // todo - stačí poslat seznam hráčů ve hře?
-    //   if (this.isServer) {
-    //     this.globalStats.incScoreStart(this.player List);
-    //     this.localStats.incScoreStart(this.playe rList);
-    //   }
-
-    //   this.send("GameStarted", this.packet(true));
-    // }
-    // // server only - inheritance ... a pryč s tím
-    // endGame(prm) {
-    //   this.readyCount = 0;
-    //   this.gameStarted = false;
-
-    //   for (var i = 0; i < this.play erList.length; i++) {
-    //     this.pl ayerList[i].inGame = false;
-    //     this.pl ayerList[i].ready = false;
-    //   }
-
-    // this.send("UpdateClients", this.packet(true));
-    // this.send("GameEnded", prm);
-    // }
-
-
-    // ready, next day, ... sem bych mohl strkat funkce
-    // data = {fce: "UpdateClientPosition", data: {}}
-    LobbyMessage(clientId, data) {
-      if (data === undefined)
-        return;
-
-      var operation = data.fce;
-      switch (operation) {
-        case "UpdateClientPosition":
-          this.clientUpdate(data.data);
-          break;
-
-        case "ReadyStateChange":
-          this.playerReady(clientId, data.data);
-          break;
-
-      }
-    }
-
-
-  }
 })(typeof exports === 'undefined' ? this['lobby'] = {} : exports);

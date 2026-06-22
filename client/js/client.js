@@ -1,7 +1,7 @@
 /**
  * Nějaký základní připojování a odpojování do hry
  * kominikace client <> server
- * 
+ *
  */
 
 
@@ -22,8 +22,8 @@ class clientClass {
       up: false,
       down: false,
 
-      respawn: false, // todo - hlídat i release klávesy ? 
-      respawnDown: false, // todo - hlídat i release klávesy ? 
+      respawn: false, // todo - hlídat i release klávesy ?
+      respawnDown: false, // todo - hlídat i release klávesy ?
       boost: false
     }
 
@@ -40,7 +40,7 @@ class clientClass {
   }
 
 
-  // že by tohle kreslilo mapu - ano, otázka, jestli mám dělat setInterval ?? 
+  // že by tohle kreslilo mapu - ano, otázka, jestli mám dělat setInterval ??
   update() {
 
     //    this.lobby.update(/*data*/);
@@ -60,7 +60,7 @@ class clientClass {
     localStorage.setItem(_lsvar, this.id);
 
     console.log("zpracovat", data)
-    this.lobby = new lobby({ id: this.id, width: 1200, height: 900, background: "mapa" });
+    this.lobby = new lobby({ id: this.id, name: data.name, map: data.map || "zelda", state: data.state, width: 1200, height: 900, background: "mapa" });
   }
 
   // sem by se hodilo dát to vykreslení mapy... zatím interval, časem třeba něco lepšího...
@@ -91,6 +91,7 @@ class clientClass {
     }
 
     console.log('po připojení server říká: ', data);
+    if (data.playerId) this.id = data.playerId;
     this.active = data.active;
     var sceen = (this.active ? "ingame" : "lobby");
     //sceen = "ingame"; // testing !!;
@@ -116,7 +117,7 @@ class clientClass {
   }
 
 
-  /** obecný ovládání -- 
+  /** obecný ovládání --
   pathFinding
   nextPlayer
   ....
