@@ -1,158 +1,242 @@
 /**
- * Client-side compact map loader.
- *
- * Loads the server payload from /api/maps/:mapId and rebuilds the runtime
- * Point[][] grid asynchronously. The large legacy grid.js file is no longer
- * loaded by the page.
+ * mapLoader.js  —  CLIENT-SIDE
+ * 
+ * Přijme komprimovaný payload ze serveru (nebo z data/map_*.json)
+ * a vygeneruje plnohodnotný grid[][] s Point objekty.
+ * 
+ * Výsledek je kompatibilní s mapa.js — přepíše globální `grid`,
+ * nastaví canvas rozměry a volá drawHexGrid().
+ * 
+ * Závislosti:
+ *   - Point třída (z world.js nebo const.js)
+ *   - Terrain[] (z const.js)
+ *   - canvas, ctx (globální z mapa.js)
+ *   - bgImage (globální Image)
+ * 
+ * Použití:
+ *   // Po přijetí dat ze socketu:
+ *   socket.on('MapData', (payload) => {
+ *       MapLoader.load(payload, { onReady: () => { ... } });
+ *   });
+ *   
+ *   // Nebo přímo ze souboru (fetch):
+ *   MapLoader.loadFromUrl('/data/map_zelda.json', { onReady });
  */
+
 (function (exports) {
-  exports.loadFromUrl = function loadFromUrl(url, options = {}) {
-    return fetch(url)
-      .then(response => {
-        if (!response.ok) throw new Error(`Map request failed: ${response.status}`);
-        return response.json();
-      })
-      .then(payload => exports.load(payload, options));
-  };
 
-  exports.load = function load(payload, options = {}) {
-    const decoded = decode(payload);
-    const meta = decoded.meta;
-    const rawGrid = decoded.rawGrid;
+    /**
+     * Hlavní vstupní bod — načte payload, sestaví grid, vykreslí mapu.
+     * 
+     * @param {Object}   payload     - výstup z MapData.encode()
+     * @param {Object}   options
+     * @param {Function} options.onReady     - callback po dokončení (grid je připraven)
+     * @param {Function} options.onProgress  - volitelný progress callback (0-1)
+     */
+    exports.load = function load(payload, options = {}) {
+        const { meta, rawGrid } = _decode(payload);
+        const onReady = options.onReady || (() => {});
 
-    if (typeof hexSize !== 'undefined') hexSize = meta.hexSize || hexSize;
-    if (typeof direction !== 'undefined') direction = meta.direction || direction;
+        // Nastav globální parametry (kompatibilita s mapa.js)
+        _applyMeta(meta);
 
-    grid = buildGrid(rawGrid, meta);
+        // Sestav grid s Point objekty
+        const generatedGrid = _buildGrid(rawGrid, meta);
 
-    if (options.display && typeof options.display.resizeToMap === 'function') {
-      options.display.resizeToMap(meta);
-    }
+        // Přepiš globální grid
+        grid = generatedGrid;
 
-    if (typeof options.onReady === 'function') options.onReady(grid, meta);
-    return { grid, meta };
-  };
-
-  exports.migrateLegacy = function migrateLegacy(legacyGrid, meta = {}) {
-    const rows = legacyGrid.length;
-    const cols = legacyGrid[0] ? legacyGrid[0].length : 0;
-    const packed = new Uint8Array(rows * cols);
-    const actions = [];
-    const castles = [];
-
-    for (let r = 0; r < rows; r++) {
-      for (let q = 0; q < cols; q++) {
-        const cell = legacyGrid[r][q] || {};
-        const terrain = (cell.terrain || 0) & 0x0F;
-        const activity = (cell.activity || 0) & 0x0F;
-        packed[r * cols + q] = (terrain << 4) | activity;
-
-        if (cell.action) {
-          const entry = Object.assign({ q, r }, cell.action);
-          if (cell.action.castle !== undefined) castles.push(entry);
-          else actions.push(entry);
+        // Pokud bg obrázek ještě není načten, počkáme
+        if (bgImage && bgImage.complete) {
+            _finalizeCanvas(meta);
+            onReady(grid);
+        } else if (bgImage) {
+            bgImage.onload = () => {
+                _finalizeCanvas(meta);
+                onReady(grid);
+            };
+        } else {
+            // Bez bg image — canvas podle počtu hexů
+            _setCanvasByGrid(meta);
+            onReady(grid);
         }
-      }
-    }
-
-    return {
-      meta: {
-        cols,
-        rows,
-        hexSize: meta.hexSize || 16,
-        direction: meta.direction || 'flat',
-        bgImage: meta.bgImage || 'zelda'
-      },
-      cells: uint8ToBase64(packed),
-      actions,
-      castles
     };
-  };
 
-  function decode(payload) {
-    const meta = payload.meta || {};
-    const cols = meta.cols || 0;
-    const rows = meta.rows || 0;
-    const packed = base64ToUint8(payload.cells || '');
-    const rawGrid = [];
+    /**
+     * Načte mapu přímo z JSON souboru (dev/singleplayer).
+     */
+    exports.loadFromUrl = function loadFromUrl(url, options = {}) {
+        fetch(url)
+            .then(r => r.json())
+            .then(payload => exports.load(payload, options))
+            .catch(err => console.error('[MapLoader] Chyba načítání mapy:', err));
+    };
 
-    for (let r = 0; r < rows; r++) {
-      rawGrid[r] = [];
-      for (let q = 0; q < cols; q++) {
-        const byte = packed[r * cols + q] || 0;
-        rawGrid[r][q] = {
-          q,
-          r,
-          terrain: (byte >> 4) & 0x0F,
-          activity: byte & 0x0F,
-          action: null
+    /**
+     * Konverze starého gridData[] na nový formát — migrační nástroj.
+     * Spusť jednorázově z konzole prohlížeče:
+     *   MapLoader.migrateLegacy(gridData, { hexSize: 16, direction: 'flat' })
+     * Vrátí JSON string, který ulož jako data/map_zelda.json
+     */
+    exports.migrateLegacy = function migrateLegacy(legacyGrid, meta = {}) {
+        const rows = legacyGrid.length;
+        const cols = legacyGrid[0]?.length || 0;
+        const actions = [];
+        const castles = [];
+        const packed = new Uint8Array(rows * cols);
+
+        for (let r = 0; r < rows; r++) {
+            for (let q = 0; q < cols; q++) {
+                const cell = legacyGrid[r][q] || {};
+                const terrain  = (cell.terrain  || 0) & 0x0F;
+                const activity = (cell.activity || 0) & 0x0F;
+                packed[r * cols + q] = (terrain << 4) | activity;
+
+                if (cell.action) {
+                    const entry = { q, r, ...cell.action };
+                    if (cell.action.castle !== undefined) castles.push(entry);
+                    else actions.push(entry);
+                }
+            }
+        }
+
+        const binary = Array.from(packed).map(b => String.fromCharCode(b)).join('');
+        const base64 = btoa(binary);
+
+        const payload = {
+            meta: {
+                cols,
+                rows,
+                hexSize:   meta.hexSize   || hexSize   || 16,
+                direction: meta.direction || direction || 'flat',
+                bgImage:   meta.bgImage   || 'zelda'
+            },
+            cells: base64,
+            actions,
+            castles
         };
-      }
+
+        const json = JSON.stringify(payload, null, 2);
+        console.log('[MapLoader] Migrace dokončena. Zkopíruj JSON níže nebo stáhni:');
+        console.log(json);
+
+        // Ke stažení
+        const blob = new Blob([json], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'map_migrated.json';
+        a.click();
+
+        return payload;
+    };
+
+    // ─── INTERNALS ────────────────────────────────────────────────
+
+    function _decode(payload) {
+        const { meta, cells, actions = [], castles = [] } = payload;
+        const { cols, rows } = meta;
+
+        // Base64 → Uint8Array
+        const binary = atob(cells);
+        const packed  = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) packed[i] = binary.charCodeAt(i);
+
+        // Rozbal do rawGrid
+        const rawGrid = [];
+        for (let r = 0; r < rows; r++) {
+            rawGrid[r] = [];
+            for (let q = 0; q < cols; q++) {
+                const byte     = packed[r * cols + q] || 0;
+                rawGrid[r][q]  = {
+                    terrain:  (byte >> 4) & 0x0F,
+                    activity:  byte & 0x0F,
+                    q, r,
+                    action: null
+                };
+            }
+        }
+
+        // Vrať akce
+        for (const a of actions) {
+            if (rawGrid[a.r]?.[a.q]) {
+                const { q, r, ...data } = a;
+                rawGrid[a.r][a.q].action = data;
+            }
+        }
+        for (const c of castles) {
+            if (rawGrid[c.r]?.[c.q]) {
+                rawGrid[c.r][c.q].action = { castle: c.castle, ownerId: c.ownerId || null };
+            }
+        }
+
+        return { meta, rawGrid };
     }
 
-    (payload.actions || []).forEach(action => {
-      if (rawGrid[action.r] && rawGrid[action.r][action.q]) {
-        const data = Object.assign({}, action);
-        delete data.q;
-        delete data.r;
-        rawGrid[action.r][action.q].action = data;
-      }
-    });
+    /**
+     * Sestaví grid[][] s plnohodnotnými Point objekty.
+     * x, y souřadnice se dopočítají z q, r — nikdy se neukládají.
+     */
+    function _buildGrid(rawGrid, meta) {
+        const { cols, rows, hexSize: hs, direction: dir } = meta;
+        const hexWidth  = dir === 'flat' ? Math.sqrt(3) * hs : 2 * hs;
+        const hexHeight = dir === 'flat' ? 2 * hs : Math.sqrt(3) * hs;
 
-    (payload.castles || []).forEach(castle => {
-      if (rawGrid[castle.r] && rawGrid[castle.r][castle.q]) {
-        const data = Object.assign({}, castle);
-        delete data.q;
-        delete data.r;
-        rawGrid[castle.r][castle.q].action = data;
-      }
-    });
+        const result = [];
 
-    return { meta, rawGrid };
-  }
+        for (let r = 0; r < rows; r++) {
+            result[r] = [];
+            for (let q = 0; q < cols; q++) {
+                const raw = rawGrid[r]?.[q] || { terrain: 0, activity: 0, q, r, action: null };
 
-  function buildGrid(rawGrid, meta) {
-    const rows = meta.rows || rawGrid.length;
-    const cols = meta.cols || (rawGrid[0] ? rawGrid[0].length : 0);
-    const hs = meta.hexSize || 16;
-    const dir = meta.direction || 'flat';
-    const hexWidth = dir === 'flat' ? Math.sqrt(3) * hs : 2 * hs;
-    const hexHeight = dir === 'flat' ? 2 * hs : Math.sqrt(3) * hs;
-    const PointCtor = (typeof Point !== 'undefined' && Point.Point) ? Point.Point : null;
-    const result = [];
+                // Výpočet pixelových souřadnic středu hexu
+                let x, y;
+                if (dir === 'flat') {
+                    x = q * hexWidth + (r % 2 ? hexWidth / 2 : 0);
+                    y = r * hexHeight * 0.75;
+                } else {
+                    x = q * hexWidth * 0.75;
+                    y = r * hexHeight + (q % 2 ? hexHeight / 2 : 0);
+                }
 
-    for (let r = 0; r < rows; r++) {
-      result[r] = [];
-      for (let q = 0; q < cols; q++) {
-        const raw = rawGrid[r] && rawGrid[r][q]
-          ? rawGrid[r][q]
-          : { terrain: 0, activity: 0, action: null };
-        const x = dir === 'flat'
-          ? q * hexWidth + (r % 2 ? hexWidth / 2 : 0)
-          : q * hexWidth * 0.75;
-        const y = dir === 'flat'
-          ? r * hexHeight * 0.75
-          : r * hexHeight + (q % 2 ? hexHeight / 2 : 0);
+                // Vytvoř Point objekt
+                // Point(x, y, action, activity, terrain, q, r)
+                const point = new Point(x, y, raw.action, raw.activity, raw.terrain, q, r);
+                result[r][q] = point;
+            }
+        }
 
-        result[r][q] = PointCtor
-          ? new PointCtor(x, y, raw.action, raw.activity, raw.terrain, q, r)
-          : { x, y, action: raw.action, activity: raw.activity, terrain: raw.terrain, q, r };
-      }
+        return result;
     }
 
-    return result;
-  }
+    function _applyMeta(meta) {
+        // Přepiš globální proměnné (kompatibilita s mapa.js)
+        if (typeof hexSize !== 'undefined')  hexSize  = meta.hexSize;
+        if (typeof direction !== 'undefined') direction = meta.direction;
+    }
 
-  function base64ToUint8(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  }
+    function _finalizeCanvas(meta) {
+        if (typeof canvas === 'undefined' || !canvas) return;
+        if (typeof bgImage !== 'undefined' && bgImage?.complete && bgImage.naturalWidth > 0) {
+            canvas.width  = bgImage.width  || bgImage.naturalWidth;
+            canvas.height = bgImage.height || bgImage.naturalHeight;
+        } else {
+            _setCanvasByGrid(meta);
+        }
 
-  function uint8ToBase64(bytes) {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
+        if (typeof maxCapX !== 'undefined') {
+            maxCapX = canvas.width  - (window.innerWidth  || 1200) + 324;
+            maxCapY = canvas.height - (window.innerHeight || 900)  + 4;
+        }
+    }
+
+    function _setCanvasByGrid(meta) {
+        if (typeof canvas === 'undefined' || !canvas) return;
+        const hs = meta.hexSize || 16;
+        const dir = meta.direction || 'flat';
+        const hexW = dir === 'flat' ? Math.sqrt(3) * hs : 2 * hs;
+        const hexH = dir === 'flat' ? 2 * hs : Math.sqrt(3) * hs;
+        canvas.width  = meta.cols * hexW + hexW / 2;
+        canvas.height = meta.rows * hexH * 0.75 + hexH * 0.25;
+    }
+
 })(typeof exports === 'undefined' ? this['MapLoader'] = {} : exports);

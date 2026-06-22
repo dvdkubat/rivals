@@ -48,8 +48,6 @@ if (typeof require !== 'undefined') {
       this.active    = false;   // true = hra běží
 
       this.weather = null;
-      this.stateVersion = 0;
-      this.gameState = { players: {}, version: this.stateVersion };
     }
 
     // ─── HESLO ───────────────────────────────────────────────
@@ -67,11 +65,10 @@ if (typeof require !== 'undefined') {
       this.socketMap.set(socket.id, socket);
       this.playerData.set(socket.id, {
         name:  prm.playerName || 'Hráč',
-        race:  'human',
+        race:  null,
         ready: false
       });
       this.players++;
-      this.ensurePlayerState(socket.id, prm.playerName || 'Hráč');
 
       console.log(`[Lobby ${this.id}] Připojen: ${prm.playerName} (${socket.id}) — ${this.players}/${this.max}`);
 
@@ -81,8 +78,6 @@ if (typeof require !== 'undefined') {
         map:    this.map,
         mode:   this.mode,
         active: this.active,
-        playerId: socket.id,
-        state:  this.gameState,
         items:  this.packet(true),
       };
     }
@@ -93,7 +88,6 @@ if (typeof require !== 'undefined') {
       const player = this.playerData.get(socketId);
       this.socketMap.delete(socketId);
       this.playerData.delete(socketId);
-      delete this.gameState.players[socketId];
       this.players = Math.max(0, this.players - 1);
 
       // Notifikuj ostatní hráče v lobby
@@ -125,9 +119,7 @@ if (typeof require !== 'undefined') {
       this.active = true;
 
       console.log(`[Lobby ${this.id}] Hra začíná!`);
-      this.broadcastGameState();
       this.send('GameStarts', {
-        state: this.gameState,
         players: [...this.playerData.entries()].map(([id, p]) => ({
           socketId: id,
           name: p.name,
@@ -151,13 +143,7 @@ if (typeof require !== 'undefined') {
 
       switch (data.fce) {
         case 'UpdateClientPosition':
-        case 'ArmyMoved':
-          this.updateArmy(socketId, data.data);
-          break;
-
-        case 'BuildCastle':
-        case 'RecruitArmy':
-          this.updateEconomy(socketId, data.data);
+          // TODO - metoda která aktualizuje pozici armády na serveru
           break;
 
         case 'ReadyStateChange':
@@ -169,12 +155,8 @@ if (typeof require !== 'undefined') {
           break;
 
         case 'SetRace':
-          if (this.playerData.has(socketId)) {
+          if (this.playerData.has(socketId))
             this.playerData.get(socketId).race = data.data?.race;
-            this.ensurePlayerState(socketId, this.playerData.get(socketId).name);
-            this.gameState.players[socketId].race = data.data?.race || 'human';
-            this.broadcastGameState();
-          }
           break;
 
         default:
@@ -207,70 +189,7 @@ if (typeof require !== 'undefined') {
         players: this.players,
         max:     this.max,
         active:  this.active,
-        state:   full ? this.gameState : undefined,
       };
-    }
-
-    ensurePlayerState(socketId, name) {
-      if (this.gameState.players[socketId]) return;
-      this.gameState.players[socketId] = {
-        id: socketId,
-        name,
-        race: 'human',
-        castle: {
-          race: 'human',
-          resources: { wood: 100, stone: 100, gold: 100, population: 7, food: 0, iron: 0 },
-          buildings: { saw_mill: 2, bakery: 0 }
-        },
-        armies: [{
-          id: `army_${socketId}`,
-          ownerId: socketId,
-          name: 'Natan',
-          race: 'human',
-          q: 22,
-          r: 11,
-          units: { spearman: 5, archer: 2 },
-          movementPoints: 20,
-          speed: 20
-        }]
-      };
-      this.bumpState();
-    }
-
-    updateArmy(socketId, data = {}) {
-      this.ensurePlayerState(socketId, this.playerData.get(socketId)?.name || 'Hráč');
-      const player = this.gameState.players[socketId];
-      const army = data.army;
-      if (army) {
-        const existingIndex = player.armies.findIndex(item => item.id === army.id);
-        if (existingIndex === -1) player.armies.push(army);
-        else player.armies[existingIndex] = army;
-      }
-      if (data.castle) player.castle = data.castle;
-      this.bumpState();
-      this.broadcastGameState();
-    }
-
-    updateEconomy(socketId, data = {}) {
-      this.ensurePlayerState(socketId, this.playerData.get(socketId)?.name || 'Hráč');
-      const player = this.gameState.players[socketId];
-      if (data.castle) player.castle = data.castle;
-      if (data.army) {
-        const existingIndex = player.armies.findIndex(item => item.id === data.army.id);
-        if (existingIndex === -1) player.armies.push(data.army);
-        else player.armies[existingIndex] = data.army;
-      }
-      this.bumpState();
-      this.broadcastGameState();
-    }
-
-    bumpState() {
-      this.stateVersion++;
-      this.gameState.version = this.stateVersion;
-    }
-
-    broadcastGameState() {
-      this.send('OnLobbyMessage', { fce: 'GameState', data: this.gameState });
     }
 
     getReadyText() {

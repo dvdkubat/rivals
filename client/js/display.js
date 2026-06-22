@@ -151,23 +151,6 @@ class display {
         ));
     }
 
-    resizeToMap(meta) {
-        const bg = this.imgCache[meta.bgImage || this.bgImg];
-        this.bgImg = meta.bgImage || this.bgImg;
-        if (bg && bg.complete && bg.width && bg.height) {
-            this.canvas.width = bg.width;
-            this.canvas.height = bg.height;
-            return;
-        }
-
-        const hs = meta.hexSize || hexSize || 16;
-        const dir = meta.direction || direction || 'flat';
-        const hexWidth = dir === 'flat' ? Math.sqrt(3) * hs : 2 * hs;
-        const hexHeight = dir === 'flat' ? 2 * hs : Math.sqrt(3) * hs;
-        this.canvas.width = (meta.cols || 0) * hexWidth + hexWidth / 2;
-        this.canvas.height = (meta.rows || 0) * hexHeight * 0.75 + hexHeight * 0.25;
-    }
-
     img(name) {
         return this.imgCache[name];
     }

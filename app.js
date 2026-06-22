@@ -28,8 +28,6 @@ const SUPPORTED_LANGS = ['cs', 'en'];          // snadné rozšíření
 const missingKeys     = {};                    // logování chybějících klíčů
 
 const gameData = JSON.parse(fs.readFileSync('./data/races.json', 'utf8'));
-const { MapManager } = require('./scripts/serverMap');
-const mapManager = new MapManager(path.join(__dirname, 'data'));
 
 // ─── PŘEKLADY ────────────────────────────────────────────────
 
@@ -168,13 +166,6 @@ app.get('/api/lobbies', (req, res) => {
   res.json(server.getLobbies());
 });
 
-// API: compact map payload used by the async client map loader.
-app.get('/api/maps/:mapId', (req, res) => {
-  const payload = mapManager.getMap(req.params.mapId);
-  if (!payload) return res.status(404).json({ error: 'map-not-found' });
-  res.json(payload);
-});
-
 // URL přímé připojení do lobby: /AbCdEfGh nebo /AbCdEfGh?lang=en
 app.get('/:lobbyId', (req, res) => {
   const lobbyId = req.params.lobbyId;
@@ -259,5 +250,5 @@ io.sockets.on('connection', function (socket) {
 
 // ─── GAME SERVER ──────────────────────────────────────────────
 
-var server = new (require('./scripts/server')).server(gameData, mapManager);
+var server = new (require('./scripts/server')).server(gameData);
 server.createGame({ pass: '', name: 'Svět 1', max: 4, map: 'zelda' });

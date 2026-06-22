@@ -23,7 +23,6 @@
   <script src="./client/js/const.js"></script>
   <script src="./client/js/army.js"></script>
   <script src="./client/js/gameManager.js"></script>
-  <script src="./client/js/mapLoader.js"></script>
   <script src="./client/js/mapController.js"></script>
   <script src="./client/js/shr/combat.js"></script>
   <!-- <script src="./client/js/variables.js"></script> -->
@@ -43,7 +42,7 @@
   <script src="./client/js/scene_select.js"></script>
 
   <!-- <script src="./client/js/const.js"></script> -->
-  <!-- Map data is loaded asynchronously from /api/maps/:mapId. -->
+  <script src="./client/js/grid.js"></script>
 
   <!-- <script src="./client/js/mapa.js"></script> -->
   <!-- <script src="./client/js/test.js"></script> -->
@@ -72,58 +71,21 @@
     <%- html.scene_settings %>
   </div>
   <div id="tutorial-screen" group="scene" name="tutorial" class="hidden guiDiv game-bg-overlay menu-template">
-    <h2>Tutorial</h2>
-    <ol>
-      <li><strong>Join a world:</strong> press Play, pick a lobby, then Connect.</li>
-      <li><strong>Prepare:</strong> choose your starting slot and mark yourself ready.</li>
-      <li><strong>Explore:</strong> on the map, click your army marker to show reachable hexes, then click a highlighted hex to move.</li>
-      <li><strong>Build:</strong> open the castle panel, upgrade resource buildings, and recruit troops into your field army.</li>
-      <li><strong>Win:</strong> collect resources, grow your army, and prepare for battles around castles and points of interest.</li>
-    </ol>
-    <button onclick="UserEvent('menu')">Back</button>
+    <h2>Tutorial</h2><p>Template: choose a lobby, select a starting castle, then click your army on the map and choose a reachable hex to move.</p><button onclick="UserEvent('menu')">Back</button>
   </div>
   <div id="info-screen" group="scene" name="info" class="hidden guiDiv game-bg-overlay menu-template">
-    <h2>Rivals: The Last Stand</h2>
-    <p>Rivals is a browser strategy prototype about rebuilding a faction, scouting a hex world, and projecting power through castles and mobile armies.</p>
-    <ul>
-      <li><strong>Factions:</strong> Human, Undead, and Robot economies are prepared in the data model.</li>
-      <li><strong>Core loop:</strong> build production, recruit units, move armies, gather resources, and resolve conflicts.</li>
-      <li><strong>Current build:</strong> lobby join, compact map loading, starter castle economy, and synchronized army/castle state are available for playtesting.</li>
-    </ul>
-    <button onclick="UserEvent('menu')">Back</button>
+    <h2>Game info</h2><p>Template: turn-based strategy prototype with castles, armies, resources, POIs and hex movement.</p><button onclick="UserEvent('menu')">Back</button>
   </div>
   <div id="support-screen" group="scene" name="support" class="hidden guiDiv game-bg-overlay menu-template">
-    <h2>Support</h2>
-    <p>If something breaks, capture the lobby name, browser console output, and the action that caused the issue.</p>
-    <ul>
-      <li>Connection issue: refresh the lobby list and reconnect to the same world.</li>
-      <li>Map issue: verify that <code>/api/maps/zelda</code> returns JSON.</li>
-      <li>Gameplay issue: include the army name, castle action, and visible resource totals.</li>
-    </ul>
-    <button onclick="UserEvent('menu')">Back</button>
+    <h2>Support</h2><p>Template: add bug report links, contact info and troubleshooting notes here.</p><button onclick="UserEvent('menu')">Back</button>
   </div>
   <div id="roadmap-screen" group="scene" name="roadmap" class="hidden guiDiv game-bg-overlay menu-template">
-    <h2>Roadmap</h2>
-    <ol>
-      <li><strong>Alpha:</strong> socket-synchronized economy, army movement, map POIs, and turn controls.</li>
-      <li><strong>Combat:</strong> army encounters, battle reports, unit abilities, and retreat rules.</li>
-      <li><strong>World:</strong> generated maps, weather effects, neutral camps, treasures, and fog of war.</li>
-      <li><strong>Multiplayer:</strong> race selection, ready checks, reconnect support, and persistent lobby state.</li>
-      <li><strong>Polish:</strong> translations, audio settings, accessibility pass, and mobile-friendly controls.</li>
-    </ol>
-    <button onclick="UserEvent('menu')">Back</button>
+    <h2>Roadmap</h2><ul><li>Lobby flow</li><li>Castle economy</li><li>Army movement</li><li>Combat and diplomacy</li></ul><button onclick="UserEvent('menu')">Back</button>
   </div>
   <div id="test-screen" group="scene" name="test" class="hidden guiDiv game-bg-overlay menu-template">
-    <h2>Test Lab</h2>
-    <p>Use these checks when validating a build:</p>
-    <ul>
-      <li>Open Play and confirm the default world appears in the lobby list.</li>
-      <li>Join the world and verify the compact map loads without the legacy grid script.</li>
-      <li>Click the starter army, move to a reachable hex, and confirm the sidebar movement value changes.</li>
-      <li>Open the castle, build a resource building, recruit units, and confirm another connected client receives the update.</li>
-    </ul>
-    <button onclick="UserEvent('btnPlay')">Open lobbies</button><button onclick="UserEvent('menu')">Back</button>
+    <h2>Test lab</h2><p>Template: quick links for smoke testing map, castle and army controls.</p><button onclick="UserEvent('btnPlay')">Open lobbies</button><button onclick="UserEvent('menu')">Back</button>
   </div>
+
 
   <!-- Výběr lobby -->
   <div id="servers-list" group="scene" name="servers" class="guiDiv hidden game-bg-overlay">

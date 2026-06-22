@@ -50,8 +50,9 @@ const LOBBY_ID_LENGTH = 8;
       console.log(`🔌  connect: socket=${socket.id} savedId=${savedId || '—'}`);
 
       // TODO: pokud savedId sedí na existující lobby, přesměrovat tam
+      const newId = generateId();
       this._broadcastPlayerCount();
-      return socket.id;
+      return newId;
     }
 
     /**

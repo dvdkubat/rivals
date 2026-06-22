@@ -1,7 +1,7 @@
 /**
  * Army — armáda na mapě
  * Pohybuje se po hexech, má pohybové body, nese jednotky a zásoby
- *
+ * 
  * Závislosti: GameManager.DEFAULT_MOVEMENT_POINTS
  */
 
@@ -176,11 +176,7 @@
 
         static fromPacket(data, grid) {
             const hex = grid[data.r]?.[data.q];
-            if (!hex) return null;
-            const army = new Army({ ...data, hex });
-            army.id = data.id || army.id;
-            army.movementPoints = data.movementPoints ?? army.movementPoints;
-            return army;
+            return new Army({ ...data, hex });
         }
     };
 
