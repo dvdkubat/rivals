@@ -14,28 +14,31 @@ const Actions = [
 
 
 const CASTLEs = [
-    new Castle("human", "human", "human-catle"),
-    new Castle("undead", "undead"),
-    new Castle("robot", "robot")
-
+    { race: "human", name: "human", img: "human" },
+    { race: "undead", name: "undead", img: "undead" },
+    { race: "robot", name: "robot", img: "robot" }
 ];
 
 const POIs = [
-    new POI("loot", "cart", { "wood": 50, "gold": 10, "soul": 3 }, "cart"),
-    new POI("loot", "chest", { "wood": 50, "gold": 10, "soul": 3 }, "chest"),
-    new POI("loot", "skeleton", { "wood": 50, "gold": 10, "soul": 3 }, "skeleton"),
-    new POI("loot", "battlefield", { "wood": 50, "gold": 10, "soul": 3 }, "battlefield"),
-    new POI("loot", "trader", { "wood": 50, "gold": 10, "soul": 3 }, "trader")
-    //cave, ruins, ... ?
+    { type: "loot", name: "cart", resources: { wood: 50, gold: 10, soul: 3 }, img: "cart" },
+    { type: "loot", name: "chest", resources: { wood: 50, gold: 10, soul: 3 }, img: "chest" },
+    { type: "loot", name: "skeleton", resources: { wood: 50, gold: 10, soul: 3 }, img: "skeleton" },
+    { type: "loot", name: "battlefield", resources: { wood: 50, gold: 10, soul: 3 }, img: "battlefield" },
+    { type: "loot", name: "trader", resources: { wood: 50, gold: 10, soul: 3 }, img: "trader" }
 ];
-
 
 const Terrain = [
-    new TerrainType("none", "#b22222", 0),
-    new TerrainType("water", "#4682b4", 0.7),
-    new TerrainType("grass", "#7cfc00", 1),
-    new TerrainType("forest", "#228b22", 1.25)
+    { name: "none", color: "#b22222", cost: 0 },
+    { name: "water", color: "#4682b4", cost: 0.7 },
+    { name: "grass", color: "#7cfc00", cost: 1 },
+    { name: "forest", color: "#228b22", cost: 1.25 }
 ];
+
+function returnImage(name) {
+    var image = new Image();
+    image.src = './client/' + name;
+    return image;
+}
 
 const IMGS = {
     "chest": returnImage("img/poi/chest.png"),
@@ -520,7 +523,7 @@ const BUILDING_DEFINITIONS = {
 //         buildingElement.innerHTML = innerHTML;
 //         buildingsContainer.appendChild(buildingElement);
 //     });
-// } 
+// }
 const WEATHER_DEFINITIONS = {
     clear: {
         name: "Slunečno ☀️",

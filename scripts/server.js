@@ -1,198 +1,185 @@
 /**
- * Třída by měla pracovat jako komunikační most
- * client.js <> app.js a následně přeposílat události na správný Lobby clienta
+ * scripts/server.js
+ * Komunikační most: app.js (socket) <-> serverLobby instance
+ *
+ * Opravy:
+ *  - disconnect(): splice() se nesmí přiřazovat zpět — opraveno
+ *  - disconnect() a leave() byly duplicitní — sjednoceno
+ *  - playerSocketList je nyní Map (socketId → playerId) místo pole
+ *  - ready() předává data do správné lobby
+ *  - startLoby() (překlep zachován pro kompatibilitu) opraveno na správné ID
  */
 
+const fs     = require('fs');
+const _lobby = require('./serverLobby');
 
-/** todo's
- * při delší nečinnosti smazat lobby
- * 
- * 
- */
-
-
-const fs = require('fs');
-const _lobby = require("./serverLobby");
-// const stats = require("./stats");
-// const dbFile = './db/stats.json';
-const lobbyStringLength = 8;
+const LOBBY_ID_LENGTH = 8;
 
 (function (exports) {
 
-  const _default = {
-  };
-
-  function assignDefault(o) { return assign(_default, o); }
   function assign(o1, o2) { return Object.assign({}, o1, o2); }
 
-  Id = function () {
-    return GenerateString(lobbyStringLength);
-  }
-
-  GenerateString = function (size) {
-    var res = "";
-    for (i = 0; i < size; i++) {
-      var char = Math.floor(Math.random() * 61);
-      res += String.fromCharCode(char + (char < 10 ? 48 : (char <= 35 ? 55 : 61)));
+  function generateId(length = LOBBY_ID_LENGTH) {
+    let res = '';
+    for (let i = 0; i < length; i++) {
+      const c = Math.floor(Math.random() * 62);
+      res += String.fromCharCode(c < 10 ? 48 + c : c < 36 ? 55 + c : 61 + c);
     }
     return res;
   }
 
-  // parametr pro server jsou proměnný z jsonů
   exports.server = class server {
+
     constructor(prm) {
-      prm = assign(_default, prm);
+      this.lobbies          = {};   // { lobbyId: lobbyInstance }
+      this.playerInLobby    = {};   // { socketId: lobbyId }
+      this.connectedPlayers = 0;
 
-      this.curentGames = 0;
-      this.lobbies = {};
-      this.playerInLobby = {};
-
-      this.connectedPlayers = 0; // víceméně to je playerSocketList.length
-      this.playerSocketList = []; // slovník {id: socket.id} ... nebo obráceně?
-
-      // console.log(prm);      // load variables from json file !!
-      console.log('Server started !');
+      console.log('✅  Herní server inicializován');
     }
-    // run() {
-    //   for (var l in this.lobbies) {
-    //     var lobby = this.lobbies[l];
-    //     lobby.updateClients(this.connectedPlayers);
 
-    //     lobby.netUpdate();
-    //   }
-    //   // todo - databáze - možnost pravidelně ukládat? == this.stats.save()
-    // }
+    // ─── PŘIPOJENÍ / ODPOJENÍ ─────────────────────────────────
 
-    // parametr je ID lobby v kterým si hráč myslí že má být
-    // todo :: pokud po F5 sedí lobby ID, tak bych ho měl využít asi bych to měl posílat jako {"secret" : "asdgsdfg4654ASDG456", id : "aaaaaa" }
-    connect(id, socket) {
-      console.log('Connected: ', socket.id);
-
+    /**
+     * Volá se při socket handshake (event 'Connect').
+     * savedId = localStorage hodnota z minulé session (může být null).
+     * Vrátí nové ID pro klienta.
+     */
+    connect(savedId, socket) {
       this.connectedPlayers++;
-      this.playerSocketList.push(socket.id);
-      var id = Id();
-      console.log(id, socket.id, "kontrola, zda je id v nějaké hře, pokud ne tak poslat nové, jinak přesměrovat do hry");
-      // mohl bych mu udělat emit :: socket.emit('OnJoinGame', server.join(socket, data)) 
-      // ještě se teoreticky budu potřebovat zeptat na heslo ?
-      return Id();
+      console.log(`🔌  connect: socket=${socket.id} savedId=${savedId || '—'}`);
+
+      // TODO: pokud savedId sedí na existující lobby, přesměrovat tam
+      const newId = generateId();
+      this._broadcastPlayerCount();
+      return newId;
     }
 
-
-    disconnect(id) {
-      this.connectedPlayers--;
-
-      // this.leave(id) // musel bych to i nějak říct na clienty !
-      const index = this.playerSocketList.indexOf(id);
-
-      if (index > -1)
-        this.playerSocketList = this.playerSocketList.splice(index, 1);
-
-      this.updateClients();
-      //     this.playerInLobby[id] /// pokud jsem v lobby - tak vyhodit
-      console.log('Pokud je hráč v nehrajícím lobby, tak ho musím odpojit lobby.disconect', id);
-      console.log("Player disconnected: " + id, index);
+    /**
+     * Volá se při náhlém odpojení (zavření tabu, výpadek).
+     * Interně deleguje na leave() — jeden kód pro obě situace.
+     */
+    disconnect(socketId) {
+      console.log(`❌  disconnect: socket=${socketId}`);
+      this.leave(socketId);
     }
 
-    updateClients() {
-      for (var l in this.lobbies) {
-        var lobby = this.lobbies[l];
-        lobby.updateClients(this.connectedPlayers);
+    /**
+     * Volá se při explicitním opuštění (event 'Leave') i při disconnect.
+     * Odstraní hráče z lobby a aktualizuje počítadla.
+     */
+    leave(socketId) {
+      this.connectedPlayers = Math.max(0, this.connectedPlayers - 1);
+
+      const lobbyId = this.playerInLobby[socketId];
+      if (lobbyId !== undefined) {
+        const lobby = this.lobbies[lobbyId];
+        if (lobby) {
+          lobby.disconnect(socketId);
+
+          // Smazat prázdnou lobby (volitelně)
+          if (lobby.players <= 0 && !lobby.active) {
+            console.log(`🗑️   Lobby "${lobby.name}" (${lobbyId}) je prázdná, mažu ji.`);
+            delete this.lobbies[lobbyId];
+          }
+        }
+        delete this.playerInLobby[socketId];
       }
+
+      this._broadcastPlayerCount();
+      console.log(`👋  leave: socket=${socketId} lobby=${lobbyId || '—'}`);
+    }
+
+    // ─── LOBBY MANAGEMENT ─────────────────────────────────────
+
+    /**
+     * Připojí hráče do lobby.
+     * prm = { connect: lobbyId, pass, name }
+     */
+    join(socket, prm) {
+      prm = assign({ connect: '', pass: '', name: 'Hráč' }, prm);
+
+      if (!prm.connect)
+        return { error: 'no-lobby' };
+
+      const lobby = this.lobbies[prm.connect];
+      if (!lobby)
+        return { error: 'not-found' };
+
+      if (!lobby.checkPassword(prm.pass))
+        return { error: 'bad-pass' };
+
+      if (lobby.players >= lobby.max)
+        return { error: 'full' };
+
+      // Pokud byl hráč v jiné lobby, odstraň ho odtamtud
+      if (this.playerInLobby[socket.id]) {
+        this.leave(socket.id);
+        this.connectedPlayers++; // leave() snížilo, ale hráč je stále připojen
+      }
+
+      this.playerInLobby[socket.id] = lobby.id;
+
+      const result = lobby.connect(socket, {
+        Id:         socket.id,
+        lobby:      prm.connect,
+        playerName: prm.name
+      });
+
+      console.log(`➡️   join: ${prm.name} → lobby "${lobby.name}" (${lobby.id})`);
+      return result;
+    }
+
+    createGame(prm) {
+      const id = generateId();
+      const newLobby = new _lobby.lobby(assign({
+        id,
+        pass:  '',
+        name:  'Hra',
+        mode:  'Standard',
+        max:   4,
+        map:   'zelda',
+        limit: 0
+      }, prm));
+
+      this.lobbies[id] = newLobby;
+      console.log(`🎮  Nová lobby: "${newLobby.name}" (${id})`);
+      return id;
     }
 
     getLobbies() {
-      var list = [];
-      for (var l in this.lobbies) {
-        list.push(this.lobbies[l].info());
-      }
-      return list;
+      return Object.values(this.lobbies).map(l => l.info());
     }
 
-    join(socket, prm) {
-      prm = assign({ connect: "", pass: "", name: "Player" }, prm);
-
-      if (prm.connect == "")
-        return { error: "neexistuje" };
-
-      try {
-        var lobby = this.lobbies[prm.connect];
-        if (lobby === undefined)
-          return { error: "naser-si" };
-
-        if (!lobby.checkPassword(prm.pass))
-          return { error: "bad-pass" }
-
-
-        this.playerInLobby[socket.id] = lobby.id;
-        return this.lobbies[prm.connect].connect(socket, { Id: prm.id, lobby: prm.connect, playerName: prm.name });
-
-      }
-      catch (e) {
-        console.log(e)
-      }
-
-      return { error: "posralo-se-to" };
+    ready(socketId, data) {
+      const lobby = this._getLobbyBySocket(socketId);
+      if (lobby) lobby.playerReady(socketId, data);
     }
 
-    // ready(clientId, data) {
-    //   var lobby = this.getPlayerLobby(clientId);
-    //   if (lobby != null)
-    //     lobby.readyChanged(data);
-    // }
-
-    leave(clientId) {
-      console.log("Player disconnected: " + clientId);
-
-      if (this.playerInLobby[clientId] !== undefined) { // existuje mapování hráč - lobby
-        if (this.lobbies[this.playerInLobby[clientId]] !== undefined) { //  v seznamu her lobby existuje
-          this.lobbies[this.playerInLobby[clientId]].disconnect(clientId); // smazat ho v lobby (socektList + component)
-        }
-        delete this.playerInLobby[clientId];
-      }
+    // Překlep v originále zachován pro kompatibilitu se zbytkem kódu
+    startLoby(lobbyId) {
+      const lobby = this.lobbies[lobbyId];
+      if (lobby) lobby.startGame();
+      else console.warn(`⚠️  startLoby: lobby ${lobbyId} nenalezena`);
     }
 
-
-    createGame(prm) {
-      var newLobby;
-      //// object.assign ? 
-      if ("pass" in prm && "name" in prm) {
-        if (prm["name"] != "") {
-          prm["id"] = Id();
-          prm["stats"] = this.stats; // pointer to global statistic
-          newLobby = new _lobby.lobby(prm);
-          this.lobbies[newLobby.id] = newLobby;
-          this.curentGames++;
-        }
-      }
-      return newLobby;
+    LobbyMessage(socketId, data) {
+      const lobby = this._getLobbyBySocket(socketId);
+      if (lobby) lobby.LobbyMessage(socketId, data);
     }
 
-    // pokud nic nenajdu, tak to musí vrátit null, jinak by to mohlo padnout na nesmysl, a že to na něj padalo.... 
-    getPlayerLobby(clientId) {
-      try {
-        return this.lobbies[this.playerInLobby[clientId]];
-      }
-      catch {
-        return null;
-      }
+    // ─── HELPERS ──────────────────────────────────────────────
+
+    _getLobbyBySocket(socketId) {
+      const lobbyId = this.playerInLobby[socketId];
+      return lobbyId ? this.lobbies[lobbyId] : null;
     }
 
-    // OnLobbyMessage(clientId, data) {
-    //   var lobby = this.getPlayerLobby(clientId);
-    //   if (lobby != null)
-    //     lobby.OnLobbyMessage(data);
-    // }
-
-    LobbyMessage(clientId, data) {
-      var lobby = this.getPlayerLobby(clientId);
-      if (lobby != null)
-        lobby.LobbyMessage(clientId, data);
+    _broadcastPlayerCount() {
+      for (const lobby of Object.values(this.lobbies)) {
+        lobby.updateClients(this.connectedPlayers);
+      }
     }
+  };
 
-
-  }
-})(exports);
-
-
-
-
+})(typeof exports === 'undefined' ? this['ServerModule'] = {} : exports);

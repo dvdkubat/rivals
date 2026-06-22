@@ -98,7 +98,7 @@ if (typeof require !== 'undefined') {
       this.resource = b.resource || null;
     }
 
-    // mám dva náhledy, buď to je cost, abych ten level vzal, takže +1, nebo to brát jako upgradecost a nechat to. Podle toho pak bude definice !! 
+    // mám dva náhledy, buď to je cost, abych ten level vzal, takže +1, nebo to brát jako upgradecost a nechat to. Podle toho pak bude definice !!
     get cost() {
       var data = BUILDING_DEFINITIONS[this.name];
       if (data && data.levels.length > this.level + 1)
@@ -247,11 +247,13 @@ if (typeof require !== 'undefined') {
     }
 
     canAfford(cost) {
-      return Object.keys(cost).every(resource => this.resources[resource] >= cost[resource]);
+      return Object.keys(cost).every(resource => this.resources[resource] && this.resources[resource].count >= cost[resource]);
     }
 
     payCost(cost) {
-      Object.keys(cost).forEach(resource => this.resources[resource] -= cost[resource]);
+      Object.keys(cost).forEach(resource => {
+        if (this.resources[resource]) this.resources[resource].count -= cost[resource];
+      });
     }
 
     getProductionSummary() {
