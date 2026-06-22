@@ -1,205 +1,254 @@
 /**
- * Inicializace serveru, kominikace servere a client + základní funkce pro ovládání (připojení, výber hry, ...)
+ * app.js
+ * Inicializace serveru, HTTP routes, socket komunikace.
+ *
+ * Opravy:
+ *  - Proxy a loadPartials sdílí jeden helper createProxy() — bez duplikace
+ *  - Lang se předává do šablony (klient si ho uloží a může přepínat)
+ *  - Fallback: cs.json se načte vždy, en.json ho přepíše jen kde má hodnoty
+ *  - URL /:lobbyId dynamicky ověřuje existenci lobby v server.lobbies (ne hardcoded Set)
+ *  - Přidána route GET /api/lobbies pro klientský fetch
+ *  - Přidána route GET /api/lang/:lang pro překlad bez reloadu
  */
 
-const { Console } = require('console');
-var express = require('express');
-var app = express();
-const ejs = require('ejs');
-const fs = require('fs');
-const path = require('path');
+const express = require('express');
+const app     = express();
+const ejs     = require('ejs');
+const fs      = require('fs');
+const path    = require('path');
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'client'));
-app.use('/client', express.static(__dirname + '/client'));
+app.use('/client', express.static(path.join(__dirname, 'client')));
 
-const DEFAULT_LANG = 'cs';
-const missingTranslations = {};
+// ─── KONFIGURACE ─────────────────────────────────────────────
+
+const DEFAULT_LANG    = 'cs';
+const SUPPORTED_LANGS = ['cs', 'en'];          // snadné rozšíření
+const missingKeys     = {};                    // logování chybějících klíčů
+
 const gameData = JSON.parse(fs.readFileSync('./data/races.json', 'utf8'));
-//console.log(gameData["races"][0]["name"]);
 
-// ===== Načítání překladů =====
+// ─── PŘEKLADY ────────────────────────────────────────────────
+
+/**
+ * Načte překlady pro daný jazyk s fallbackem na cs.
+ * Výsledek = cs.json přepsaný klíči z lang.json (pokud existují a jsou neprázdné).
+ */
 function loadTranslations(lang = DEFAULT_LANG) {
-  const file = path.join(__dirname, 'locales', `${lang}.json`);
-  if (fs.existsSync(file)) {
-    try {
-      return JSON.parse(fs.readFileSync(file, 'utf-8'));
-    } catch (err) {
-      console.warn(`❗ Chyba v JSON ${lang}.json:`, err.message);
-    }
-  }
-  console.warn(`⚠️ Překlad ${lang}.json nenalezen. Používám výchozí.`);
-  return {}; // fallback: prázdný překlad
+  const base    = _readLocale(DEFAULT_LANG);        // vždy cs jako základ
+  if (lang === DEFAULT_LANG) return base;
+
+  const overlay = _readLocale(lang);                // en přepíše jen existující klíče
+  return { ...base, ...Object.fromEntries(
+    Object.entries(overlay).filter(([, v]) => v !== '')
+  )};
 }
 
-// ===== Načtení všech partial EJS šablon =====
-function loadPartials(translations) {
-  const html = {};
-  const partialsDir = path.join(__dirname, 'client', 'partials');
+function _readLocale(lang) {
+  const file = path.join(__dirname, 'locales', `${lang}.json`);
+  if (!fs.existsSync(file)) {
+    console.warn(`⚠️  Překlad ${lang}.json nenalezen.`);
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch (err) {
+    console.warn(`❗  Chyba v JSON ${lang}.json:`, err.message);
+    return {};
+  }
+}
 
+/**
+ * Vytvoří Proxy nad překladem — chybějící klíče zaloguje a vrátí klíč samotný
+ * (místo "<%= key %>" které by prošlo do HTML).
+ */
+function createProxy(translations, lang) {
+  return new Proxy(translations, {
+    get(target, prop) {
+      if (typeof prop !== 'string') return target[prop]; // Symbol apod.
+      if (prop in target) return target[prop];
+
+      // Chybějící klíč — zaloguj jednou
+      if (!missingKeys[lang]) missingKeys[lang] = {};
+      if (!missingKeys[lang][prop]) {
+        missingKeys[lang][prop] = true;
+        console.warn(`[i18n] Chybí klíč "${prop}" v ${lang}.json`);
+      }
+      return prop; // vrátíme klíč jako fallback (ne EJS syntax)
+    }
+  });
+}
+
+/**
+ * Renderuje všechny EJS partialy s daným překladem.
+ */
+function loadPartials(translations, lang) {
+  const html        = {};
+  const partialsDir = path.join(__dirname, 'client', 'partials');
   if (!fs.existsSync(partialsDir)) return html;
+
+  const proxy = createProxy(translations, lang);
 
   const files = fs.readdirSync(partialsDir).filter(f => f.endsWith('.ejs'));
   for (const file of files) {
-    const name = path.basename(file, '.ejs');
+    const name     = path.basename(file, '.ejs');
+    const filePath = path.join(partialsDir, file);
     try {
-
-
-      // někde tady musím udělat ten profi fígl
-      const translationProxy = new Proxy(translations, {
-        get(target, prop) {
-          if (prop in target) {
-            return target[prop];
-          } else {
-            missingTranslations[prop] = `<%= ${prop} %>`;
-            return `<%= ${prop} %>`;
-          }
-        }
-      });
-
-      ejs.renderFile(path.join(__dirname, 'client', 'partials', file), { text: translationProxy }, (err, renderedLobby) => {
-        html[name] = renderedLobby;
-      });
+      // Synchronní render — ejs.renderFile s callbackem je zbytečně async zde
+      html[name] = ejs.render(fs.readFileSync(filePath, 'utf-8'), { text: proxy });
     } catch (err) {
-      console.error(`❌ Chyba při načítání partialu "${file}":`, err.message);
+      console.error(`❌  Chyba v partialu "${file}":`, err.message);
+      html[name] = `<!-- error in ${file} -->`;
     }
   }
-
   return html;
 }
 
-//načtení by šlo sloučit do jedné funkce - to url udělá navíc pouze nějaké drobnosti... musím vyvolat server.connect(id) --- časem?
-// ===== Výchozí stránka (homepage) =====
+// ─── HELPER: sestavení dat pro render ───────────────────────
+
+function buildRenderData(lang, lobbyId = null) {
+  const safeLang     = SUPPORTED_LANGS.includes(lang) ? lang : DEFAULT_LANG;
+  const translations = loadTranslations(safeLang);
+  const proxy        = createProxy(translations, safeLang);
+  const html         = loadPartials(translations, safeLang);
+
+  return {
+    text:    proxy,
+    html,
+    lang:    safeLang,
+    lobbyId: lobbyId || null
+  };
+}
+
+// ─── HELPER: detekce jazyka z požadavku ──────────────────────
+
+function detectLang(req) {
+  // 1. URL param ?lang=en  (nejvyšší priorita)
+  if (req.query.lang && SUPPORTED_LANGS.includes(req.query.lang))
+    return req.query.lang;
+
+  // 2. Cookie (klient si ho uložil při přepnutí)
+  const cookie = req.headers.cookie
+    ?.split(';')
+    .map(c => c.trim().split('='))
+    .find(([k]) => k === 'lang');
+  if (cookie && SUPPORTED_LANGS.includes(cookie[1]))
+    return cookie[1];
+
+  // 3. Accept-Language header (prohlížeč)
+  const accept = req.headers['accept-language'] || '';
+  const preferred = accept.split(',')[0]?.split('-')[0]?.toLowerCase();
+  if (preferred && SUPPORTED_LANGS.includes(preferred))
+    return preferred;
+
+  return DEFAULT_LANG;
+}
+
+// ─── ROUTES ──────────────────────────────────────────────────
+
+// Hlavní stránka
 app.get('/', (req, res) => {
-  const lang = req.query.lang || DEFAULT_LANG;
-  const translations = loadTranslations(lang);
-
-  const translationProxy = new Proxy(translations, {
-    get(target, prop) {
-      if (prop in target) {
-        return target[prop];
-      } else {
-        missingTranslations[prop] = `<%= ${prop} %>`;
-        return `<%= ${prop} %>`;
-      }
-    }
-  });
-
-  const html = loadPartials(translations);
-
-  res.render('index', { text: translationProxy, html });
-
-  if (Object.keys(missingTranslations).length > 0) {
-    console.log(`\n[⚠️ Chybějící překlady pro jazyk "${lang}"]`);
-    console.log(JSON.stringify(missingTranslations, null, 2));
-  }
-
+  const lang = detectLang(req);
+  res.render('index', buildRenderData(lang));
 });
 
-// ===== Zobrazení konkrétní lobby :: víceméně taky zobrazím domovskou stránku, ale můžu se pak přesměrovat na Lobby =====
-const lobbies = new Set(['a45der', 'b89zty']);
+// API: vrátí JSON překlad (klient může přepínat jazyk bez reloadu)
+app.get('/api/lang/:lang', (req, res) => {
+  const lang = SUPPORTED_LANGS.includes(req.params.lang)
+    ? req.params.lang
+    : DEFAULT_LANG;
+  res.json(loadTranslations(lang));
+});
+
+// API: seznam aktivních lobbies (pro refresh v klientu)
+app.get('/api/lobbies', (req, res) => {
+  res.json(server.getLobbies());
+});
+
+// URL přímé připojení do lobby: /AbCdEfGh nebo /AbCdEfGh?lang=en
 app.get('/:lobbyId', (req, res) => {
   const lobbyId = req.params.lobbyId;
-  const lang = req.query.lang || DEFAULT_LANG;
+  const lang    = detectLang(req);
 
-  if (!lobbies.has(lobbyId)) {
-    return res.status(404).send(`<h2>❌ Lobby <code>${lobbyId}</code> nenalezena.</h2>`);
+  // Ověř existenci lobby dynamicky — ne hardcoded Set!
+  const exists = server && server.lobbies && server.lobbies[lobbyId] !== undefined;
+  if (!exists) {
+    return res.status(404).send(
+      `<h2>❌ Lobby <code>${lobbyId}</code> nenalezena.</h2>` +
+      `<a href="/">← Zpět na hlavní stránku</a>`
+    );
   }
 
-  const translations = loadTranslations(lang);
+  const data = buildRenderData(lang, lobbyId);
+  res.render('index', data);
+});
 
-  const translationProxy = new Proxy(translations, {
-    get(target, prop) {
-      if (prop in target) {
-        return target[prop];
-      } else {
-        missingTranslations[prop] = `<%= ${prop} %>`;
-        return `<%= ${prop} %>`;
-      }
-    }
+// ─── SERVER SETUP ─────────────────────────────────────────────
+
+const _server = require('http').Server(app);
+_server.listen(process.env.PORT || 2000, () => {
+  console.log(`🚀  Server běží na portu ${process.env.PORT || 2000}`);
+});
+
+// ─── SOCKET.IO ───────────────────────────────────────────────
+
+const io = require('socket.io')(_server, {});
+
+io.sockets.on('connection', function (socket) {
+
+  console.log('🔌  Socket připojen:', socket.id);
+
+  socket.on('disconnect', function () {
+    // disconnect = náhlé přerušení (zavření tabu, výpadek sítě)
+    server.disconnect(socket.id);
   });
 
-  const html = loadPartials(translations, translationProxy);
-  res.render('index', { text: translationProxy, lobbyId, html });
+  socket.on('Connect', function (savedId) {
+    // Explicitní handshake od klienta (po načtení stránky)
+    const newId = server.connect(savedId, socket);
+    socket.emit('OnConnect', newId);
+  });
 
-  if (Object.keys(missingTranslations).length > 0) {
-    console.log(`\n[⚠️ Chybějící překlady pro jazyk "${lang}"]`);
-    console.log(JSON.stringify(missingTranslations, null, 2));
-  }
+  socket.on('ShowGameList', function () {
+    socket.emit('OnShowGameList', server.getLobbies());
+  });
 
-});
+  socket.on('JoinGame', function (data) {
+    socket.emit('OnJoinGame', server.join(socket, data));
+  });
 
+  // Přímé připojení přes URL /:lobbyId — klient pošle lobbyId ihned po Connect
+  socket.on('JoinByUrl', function (data) {
+    // data = { lobbyId, pass, name }
+    const result = server.join(socket, { connect: data.lobbyId, pass: data.pass || '', name: data.name || 'Hráč' });
+    socket.emit('OnJoinGame', result);
+  });
 
+  socket.on('CreateLobby', function (data) {
+    server.createGame(data);
+    socket.emit('OnCreateLobby', server.getLobbies());
+  });
 
-//////////// níž je to snad nějak ok neměnit
+  socket.on('Ready', function (data) {
+    server.ready(socket.id, data);
+  });
 
+  socket.on('StartLobby', function (data) {
+    server.startLoby(data);
+  });
 
-//gameData["races"][0]["name"]
+  socket.on('Leave', function () {
+    server.leave(socket.id);
+  });
 
-// založení třídy pro server a tím volání základních funkcí a kontrol
-var server = new (require("./scripts/server")).server(gameData);
-// Výchozí servery pro testování
-server.createGame({ pass: "", name: "Svet 1", max: 94, map: "zelda" });
-// server.createGame({ pass: "deset", name: "Lasagne", max: 64 });
-
-// // takže můžu jako JS i jako JSON, na clientovy to je : loadedVariables.INITIAL_PARAMETERS
-//var DATA = require("./client/js/data");
-// console.log(DATA.INITIAL_PARAMETERS)
-
-// založení serveru a naslouchání na portu
-var _server = require('http').Server(app);
-_server.listen(process.env.PORT || 2000);
-
-/**
- * Socket communication
- */
-var io = require('socket.io')(_server, {});
-// 2. na clientovi proběhlo socket = io(); >> vyvolá se connection
-io.sockets.on('connection', function (socket) {
-  socket.on('disconnect', function () { server.disconnect(socket.id) });
-
-  console.log('Connected: ', socket.id);
-  //  socket.emit('Connect', server.connect(socket.id));
-  socket.on('Connect', function (id) { server.connect(id, socket) });
-
-
-
-  /**
-   * Get available Lobbies
-   */
-  socket.on('ShowGameList', function () { socket.emit('OnShowGameList', server.getLobbies()) });
-
-  /**
-   * Join seleted Lobby - OnJoinGame() menu.js 
-   */
-  socket.on('JoinGame', function (data) { socket.emit('OnJoinGame', server.join(socket, data)) });
-
-  /**
-   * Host game
-   */
-  socket.on('CreateLobby', function (data) { server.createGame(data); socket.emit('OnCreateLobby', server.getLobbies()); });
-
-  /**
-   * Player ready
-   */
-  socket.on('Ready', function (data) { server.ready(socket.id, data); });
-
-  /**
-   * Start game -- to by se asi mělo volat samo po nějaké době (případně až když jsou višchni ready !)
-   */
-  socket.on('StartLobby', function (data) { server.startLoby(data); });
-
-  /**
-   * Disconnect - Delete connection data 
-   */
-  socket.on('Leave', function (playerId) { server.leave(socket.id) });
-
-  /**
-   * General communication Client <> Server
-   */
-  socket.on('LobbyMessage', function (data) { server.LobbyMessage(socket.id, data) });
+  socket.on('LobbyMessage', function (data) {
+    server.LobbyMessage(socket.id, data);
+  });
 
 });
 
+// ─── GAME SERVER ──────────────────────────────────────────────
 
-
+var server = new (require('./scripts/server')).server(gameData);
+server.createGame({ pass: '', name: 'Svět 1', max: 4, map: 'zelda' });

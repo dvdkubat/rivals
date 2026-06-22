@@ -788,3 +788,22 @@ footer {
     bottom: 0px;
     width: 292px;
 }
+.menu-template {
+    color: black;
+    padding: 40px;
+    box-sizing: border-box;
+}
+
+.menu-template h2,
+.menu-template p,
+.menu-template ul {
+    background-color: rgba(255, 255, 255, 0.82);
+    max-width: 720px;
+    padding: 12px 16px;
+}
+
+.menu-template button,
+#game-sceen-town button,
+.sidebar button {
+    cursor: pointer;
+}

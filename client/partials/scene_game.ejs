@@ -27,10 +27,16 @@
         </div>
 
 
+        <div class="row-last card-list-row">
+          <button onclick="UserEvent('showMap')">🗺️ Back to map</button>
+          <button onclick="client.lobby.buildCastle()">🏗️ Build castle template</button>
+          <button onclick="client.lobby.recruitArmy()">⚔️ Recruit army template</button>
+        </div>
+
         <!--  turn panel / gameState panel... ?
-            ideálně to dát doprava dolu a zobrzaovat vždy? --- asi nějaký panel... 
+            ideálně to dát doprava dolu a zobrzaovat vždy? --- asi nějaký panel...
             //gameDayDisplay.innerText = `Den: ${0}`; // gameManager !
-            <div id="gameDay"></div> 
+            <div id="gameDay"></div>
             <button id="newDayButton">Nový den</button>
             -->
       </div>
@@ -53,14 +59,14 @@
             <span style="font-size: 145px;">🌍</span>
           </div>
           <div class="section" style="text-align: center;">
-            <button onclick="alert('disconnect')">⚙️</button>
-            <button onclick="alert('nastavení')">⚙️</button>
-            <button onclick="alert('pauza')">⏸️</button>
-            <button onclick="alert('statistiky')">📈</button>
+            <button onclick="UserEvent('menu')">🏠</button>
+            <button onclick="UserEvent('btnSettings')">⚙️</button>
+            <button onclick="UserEvent('btnPause')">⏸️</button>
+            <button onclick="client.lobby.updateSidebar()">📈</button>
           </div>
           <div class="section" style="text-align: center; padding: 0;">
             <button style="width: 100%; border: 0; height: 35px; font-size: 20px;"
-              onclick="alert('todo - zobrazit město!')">
+              onclick="UserEvent('showCastle')">
               🏰 <span id="player-castle-name"></span>
             </button>
           </div>

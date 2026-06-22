@@ -10,14 +10,21 @@
   <link href="/client/index.css" rel="stylesheet" type="text/css" />
 
 
-  <!-- test only 
+  <!-- test only
   <script src="./client/js/shr/component.js"></script>
   <script src="./client/js/shr/colision.js"></script>
   <script src="./client/js/shr/2d.js"></script>
 -->
+  <script src="./client/js/i18n.js"></script>
   <script src="./client/js/cache.js"></script>
   <script src="./client/js/data.js"></script>
+  <script src="./client/js/shr/world.js"></script>
+  <script src="./client/js/shr/castle.js"></script>
   <script src="./client/js/const.js"></script>
+  <script src="./client/js/army.js"></script>
+  <script src="./client/js/gameManager.js"></script>
+  <script src="./client/js/mapController.js"></script>
+  <script src="./client/js/shr/combat.js"></script>
   <!-- <script src="./client/js/variables.js"></script> -->
   <!-- <script src="./client/js/display.js"></script> -->
 
@@ -30,24 +37,19 @@
   <script src="./client/js/clientLobby.js"></script>
   <script src="./client/js/keywatch.js"></script>
 
-  
+
   <script src="./client/js/client.js"></script>
   <script src="./client/js/scene_select.js"></script>
 
   <!-- <script src="./client/js/const.js"></script> -->
   <script src="./client/js/grid.js"></script>
 
-  <script src="./client/js/world.js"></script>
   <!-- <script src="./client/js/mapa.js"></script> -->
-
-  <script src="./client/js/castle.js"></script>
   <!-- <script src="./client/js/test.js"></script> -->
-
-  <script src="./client/js/shr/c.js"></script>
 </head>
 
 
-<body class="game-bg" style="color: black;">
+<body class="game-bg" style="color: black;" data-lobby-id="<%= lobbyId || '' %>" data-lang="<%= lang || 'cs' %>">
   <!--jelikož to nahradí libovolný text, tak to zvládne i doplnění / úpravu třídy -->
 
   <!-- <%- html.lobby || 'smolik' %> -->
@@ -68,6 +70,22 @@
   <div id="settings-overlay" group="scene" name="settings" class="hidden guiDiv game-bg-overlay">
     <%- html.scene_settings %>
   </div>
+  <div id="tutorial-screen" group="scene" name="tutorial" class="hidden guiDiv game-bg-overlay menu-template">
+    <h2>Tutorial</h2><p>Template: choose a lobby, select a starting castle, then click your army on the map and choose a reachable hex to move.</p><button onclick="UserEvent('menu')">Back</button>
+  </div>
+  <div id="info-screen" group="scene" name="info" class="hidden guiDiv game-bg-overlay menu-template">
+    <h2>Game info</h2><p>Template: turn-based strategy prototype with castles, armies, resources, POIs and hex movement.</p><button onclick="UserEvent('menu')">Back</button>
+  </div>
+  <div id="support-screen" group="scene" name="support" class="hidden guiDiv game-bg-overlay menu-template">
+    <h2>Support</h2><p>Template: add bug report links, contact info and troubleshooting notes here.</p><button onclick="UserEvent('menu')">Back</button>
+  </div>
+  <div id="roadmap-screen" group="scene" name="roadmap" class="hidden guiDiv game-bg-overlay menu-template">
+    <h2>Roadmap</h2><ul><li>Lobby flow</li><li>Castle economy</li><li>Army movement</li><li>Combat and diplomacy</li></ul><button onclick="UserEvent('menu')">Back</button>
+  </div>
+  <div id="test-screen" group="scene" name="test" class="hidden guiDiv game-bg-overlay menu-template">
+    <h2>Test lab</h2><p>Template: quick links for smoke testing map, castle and army controls.</p><button onclick="UserEvent('btnPlay')">Open lobbies</button><button onclick="UserEvent('menu')">Back</button>
+  </div>
+
 
   <!-- Výběr lobby -->
   <div id="servers-list" group="scene" name="servers" class="guiDiv hidden game-bg-overlay">
@@ -86,7 +104,7 @@
 
 
   <!-- tady už bych jenom řešil hru: -->
-  <!-- 
+  <!--
       <div id="lobby-overview" class="hidden guiDiv">
         <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">
           <%= text.ready %>
@@ -97,7 +115,7 @@
 
       </div> -->
 
-  <!-- 
+  <!--
   <div id="menu-pause" class="hidden guiDiv">
     <button type="button" onclick="ButtonEvent('LeaveGame')" id="btnLeave">Odpojit</button>
     <button type="button" onclick="ButtonEvent('PauseClose')">Zavřít</button><br>
